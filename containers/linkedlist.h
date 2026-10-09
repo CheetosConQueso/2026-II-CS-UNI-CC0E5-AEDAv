@@ -5,10 +5,11 @@
 #include "GeneralIterator.h"
 #include "../foreach.h"
 
+
 template <typename T>
 class LinkedListNode : public GeneralNode<T> {
-    using Node = LinkedListNode<T>;
-    using NodePtr = Node*;
+    using Node      = LinkedListNode<T>;
+    using NodePtr   = Node*;
 public:
     Node* m_pNext = nullptr; // puntero al siguiente nodo, npara acceso directo necesita ser publico
     LinkedListNode() : GeneralNode<T>(T{}, Ref{}), m_pNext(nullptr) {}
@@ -16,37 +17,53 @@ public:
     LinkedListNode(const T& value, Ref ref, Node* pNext) : GeneralNode<T>(value, ref), m_pNext(pNext) {}
 };
 
+
 template <typename T>
 class LinkedListForwardIterator : public GeneralIterator<LinkedListForwardIterator<T>, LinkedListNode<T>> {
 public:
-    using value_type = LinkedListNode<T>;
-    using MySelf = LinkedListForwardIterator<T>;
-    using Parent = GeneralIterator<MySelf, value_type>;
+    using value_type    = LinkedListNode<T>;
+    using MySelf        = LinkedListForwardIterator<T>;
+    using Parent        = GeneralIterator<MySelf, value_type>;
     using Parent::Parent; // Inherit constructor
     LinkedListForwardIterator& operator++() { Parent::m_ptr = Parent::m_ptr->m_pNext; return *this; }
 };
 
-template <typename T, typename _Compare>
-struct DefaultTraits {
+
+template <typename T, typename CompareT>
+struct GeneralTraits {
     using value_type        = T;
-    using Compare           = _Compare;
-};
-template <typename T, typename _Compare = std::less<T>>
-struct AscendingTraits : public DefaultTraits<T, _Compare> {};
-
-template <typename T, typename _Compare = std::greater<T>>
-struct DescendingTraits : public DefaultTraits<T, _Compare> {};
-template <typename T>
-struct LinkedListAscTraits : public AscendingTraits<T> {
-    using Node              = LinkedListNode<T>;
-    using ForwardIterator   = LinkedListForwardIterator<T>;  // itera sobre Node, no sobre T
+    using Compare           = CompareT;
 };
 
+
 template <typename T>
-struct LinkedListDescTraits : public DescendingTraits<T> {
-    using Node              = LinkedListNode<T>;
-    using ForwardIterator   = LinkedListForwardIterator<T>;  // itera sobre Node, no sobre T
+struct AscendingTraits : public GeneralTraits<T, std::less<T>> {
 };
+
+
+template <typename T>
+struct DescendingTraits : public GeneralTraits<T, std::greater<T>> {
+};
+
+template <typename Traits>
+struct LinkedListTraits {
+    using value_type        = typename Traits::value_type;
+    using Compare           = typename Traits::Compare;
+    using Node              = LinkedListNode<value_type>;
+    using ForwardIterator   = LinkedListForwardIterator<value_type>;  // itera sobre Node, no sobre T
+};
+
+
+template <typename T>
+struct LinkedListAscTraits : public LinkedListTraits<AscendingTraits<T>> {
+};
+
+
+template <typename T>
+struct LinkedListDescTraits : public LinkedListTraits<DescendingTraits<T>> {
+};
+
+
 template <typename Traits>
 class LinkedList {
 public:
@@ -118,8 +135,7 @@ public:
                 }
             }    
         }
-
-        return is; 
+        return is;
     }
     
     // Iterators
@@ -146,27 +162,6 @@ public:
     }
 };
 
-
-template <typename Traits>
-LinkedList<Traits>& LinkedList<Traits>::operator=(const LinkedList<Traits>& other){ 
-    clear();
-    if(!other.m_pRoot)
-        return;
-    std::lock_guard<std::mutex> lock(other.m_mutex);
-
-    m_pRoot = new Node(other.GetRoot()->getValue(), other.GetRoot()->getRef(), nullptr);
-
-    NodePtr next = other.m_pRoot->m_pNext;
-    NodePtr curr = m_pRoot;
-
-    while(next){
-        curr->m_pNext = new Node(next->getValue(), next->getRef(), nullptr);
-        curr = curr->m_pNext;
-        next = next->m_pNext;
-    }
-    m_pTail = curr;
-    return *this;
-}
 
 template <typename Traits>
 void LinkedList<Traits>::clear(){
@@ -198,7 +193,7 @@ insert(...) empieza desde el nodo raiz
 */
 template <typename Traits>
 void LinkedList<Traits>::internalInsert(const value_type& value, Ref ref, NodePtr& rParent) {
-    if (rParent == nullptr || value < rParent->getValue()) {
+    if (rParent == nullptr || m_comp(value, rParent->getValue())) {
         rParent = new Node(value, ref, rParent);
         m_pTail = rParent;
         return;
