@@ -81,7 +81,7 @@ class LinkedList {
         mutable std::mutex m_mutex; // mutex para sincronización
 
         NodePtr GetRoot() const { return m_pRoot; }
-        void internalInsert(const value_type& value, Ref ref, NodePtr& rParent) {};
+        virtual void internalInsert(const value_type& value, Ref ref, NodePtr& rParent);
 
     public:
         LinkedList() {}
@@ -91,8 +91,8 @@ class LinkedList {
                 push_back(v.first, v.second);
         }
         virtual ~LinkedList(){ clear(); }
-        
-        void clear();
+        virtual void clear();
+
         void push_back(const value_type& value, Ref ref);
         bool empty() const { return m_pRoot == nullptr; }
         void insert(const value_type& value, Ref ref) {
@@ -108,8 +108,6 @@ class LinkedList {
         decltype(auto) call(Func func, Args&&... args);
 
         // Iterators
-        // ForwardIterator begin() { return ForwardIterator(m_pRoot); }
-        // ForwardIterator end() { return ForwardIterator(nullptr); }
         ForwardIterator begin() const { return ForwardIterator(m_pRoot); }
         ForwardIterator end() const { return ForwardIterator(nullptr); }
 
@@ -154,8 +152,11 @@ class LinkedList {
 template <typename Traits>
 void LinkedList<Traits>::clear(){
     scoped_lock lock(m_mutex);
-    for (auto it = begin(); it != end(); ++it){
-        delete& (*it);
+    ForwardIterator it = begin();
+    while (it != end()){
+        ForwardIterator current = it;
+        ++it;
+        delete& (*current);
     }
     m_pRoot = nullptr;
     m_pTail = nullptr;
@@ -181,11 +182,11 @@ insert(...) empieza desde el nodo raiz
 */
 template <typename Traits>
 void LinkedList<Traits>::internalInsert(const value_type& value, Ref ref, NodePtr& rParent) {
-    if (rParent == nullptr) {
+    if (rParent == nullptr) { //para el caso vacio
         rParent = new Node(value, ref, nullptr);
         m_pTail = rParent;
         return;
-    } else if (m_comp(value, rParent->getValue())) {
+    } else if (m_comp(value, rParent->getValue())) { //para las iteraciones
         rParent = new Node(value, ref, rParent);
         return;
     }
