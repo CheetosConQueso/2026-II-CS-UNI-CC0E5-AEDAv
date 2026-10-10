@@ -30,19 +30,19 @@ public:
 
 
 template <typename T, typename CompareT>
-struct GeneralTraits {
+struct DefaultTraits {
     using value_type        = T;
     using Compare           = CompareT;
 };
 
 
 template <typename T>
-struct AscendingTraits : public GeneralTraits<T, std::less<T>> {
+struct AscendingTraits : public DefaultTraits<T, std::less<T>> {
 };
 
 
 template <typename T>
-struct DescendingTraits : public GeneralTraits<T, std::greater<T>> {
+struct DescendingTraits : public DefaultTraits<T, std::greater<T>> {
 };
 
 template <typename Traits>
@@ -66,100 +66,88 @@ struct LinkedListDescTraits : public LinkedListTraits<DescendingTraits<T>> {
 
 template <typename Traits>
 class LinkedList {
-public:
-    using value_type        = typename Traits::value_type;
-    using Node              = typename Traits::Node;
-    using NodePtr           = Node *;
-    using ForwardIterator   = typename Traits::ForwardIterator;
-    using Compare           = typename Traits::Compare;
-    using Delim             = typename Node::Delim;
-private:
-    NodePtr m_pRoot = nullptr; // puntero al primer nodo de la lista enlazada
-    NodePtr m_pTail = nullptr; // puntero al último nodo de la lista enlazada
-    
-    Compare m_comp; // comparador para ordenar los nodos de la lista
-    mutable std::mutex m_mutex; // mutex para sincronización
+    public:
+        using value_type        = typename Traits::value_type;
+        using Node              = typename Traits::Node;
+        using NodePtr           = Node *;
+        using ForwardIterator   = typename Traits::ForwardIterator;
+        using Compare           = typename Traits::Compare;
+        using Delim             = typename Node::Delim;
 
-    NodePtr GetRoot() const { return m_pRoot; }
-    void internalInsert(const value_type& value, Ref ref, NodePtr& rParent);
+    private:
+        NodePtr m_pRoot = nullptr; // puntero al primer nodo de la lista enlazada
+        NodePtr m_pTail = nullptr; // puntero al último nodo de la lista enlazada
+        Compare m_comp; // comparador para ordenar los nodos de la lista
+        mutable std::mutex m_mutex; // mutex para sincronización
 
-public:
-    LinkedList() {}
-    LinkedList(const LinkedList& another){ *this = another; } // copia profunda de la lista enlazada
-    LinkedList& operator=(const LinkedList& another); // no se permite asignacion
-    LinkedList(initializer_list<pair<value_type, Ref>> values) {
-        for (const auto &v : values)
-            push_back(v.first, v.second);
-    }
+        NodePtr GetRoot() const { return m_pRoot; }
+        void internalInsert(const value_type& value, Ref ref, NodePtr& rParent) {};
 
-    void clear();
-    virtual ~LinkedList(){ clear(); };
-
-    void push_back(const value_type& value, Ref ref);
-
-    bool empty() const { return m_pRoot == nullptr; }
-
-    void insert(const value_type& value, Ref ref) {
-        scoped_lock lock(m_mutex);
-        internalInsert(value, ref, m_pRoot);
-    }
-
-    std::ostream& write(std::ostream& os) { return os << *this; }
-    std::istream& read(std::istream& is) { return is >> *this; }
-
-    friend std::ostream& operator <<(std::ostream& os, const LinkedList<Traits>& list) {
-        lock_guard lock(list.m_mutex);
-        auto first = true;
-        os << "[";
-        for (auto it = list.begin(); it != list.end(); ++it){
-            if (!first)
-                os << ",";
-            os << *it;
-            first = false;
+    public:
+        LinkedList() {}
+        LinkedList(const LinkedList& another){ *this = another; } // copia profunda de la lista enlazada
+        LinkedList(initializer_list<pair<value_type, Ref>> values) {
+            for (const auto &v : values)
+                push_back(v.first, v.second);
         }
-        return os << "]";
-    }
-    
-    friend std::istream &operator >>(std::istream &is, LinkedList<Traits> &list) {
-        Delim d;
-        Node node;
-        list.clear();
-
-        is >> d;
-        if (is >> d && d != ']'){
-            is.unget();
-            while(is >> node >> d){
-                list.push_back(node.getValue(), node.getRef());
-                if (d == ']'){
-                    break;
-                }
-            }    
+        virtual ~LinkedList(){ clear(); }
+        
+        void clear();
+        void push_back(const value_type& value, Ref ref);
+        bool empty() const { return m_pRoot == nullptr; }
+        void insert(const value_type& value, Ref ref) {
+            scoped_lock lock(m_mutex);
+            internalInsert(value, ref, m_pRoot);
         }
-        return is;
-    }
-    
-    // Iterators
-    // ForwardIterator begin() { return ForwardIterator(m_pRoot); }
-    // ForwardIterator end() { return ForwardIterator(nullptr); }
-    ForwardIterator begin() const { return ForwardIterator(m_pRoot); }
-    ForwardIterator end() const { return ForwardIterator(nullptr); }
+        
+        template <typename Func, typename... Args>
+        void ApplyFunction(Func func, Args... args) { call(func, std::forward<Args>(args)...); }
+        template <typename Func, typename... Args>
+        Node& FirstThat(Func func, Args... args) { return call(func, std::forward<Args>(args)...); }
+        template<typename Func, typename... Args>
+        decltype(auto) call(Func func, Args&&... args);
 
-    template <typename Func, typename... Args>
-    void ApplyFunction(Func func, Args... args) {
-        call(func, std::forward<Args>(args)...);
-    }
-    template <typename Func, typename... Args>
-    Node& FirstThat(Func func, Args... args) {
-        return call(func, std::forward<Args>(args)...);
-    }
-    template<typename Func, typename... Args>
-    decltype(auto) call(Func func, Args&&... args)
-    {    lock_guard<mutex> lock(m_mutex);
-        if constexpr(is_void_v<invoke_result_t<Func, Node&, Args...>>)
-            ::call(begin(), end(), std::forward<Func>(func), std::forward<Args>(args)...);
-        else // return type is not void:
-            return ::call(begin(), end(), std::forward<Func>(func), std::forward<Args>(args)...);
-    }
+        // Iterators
+        // ForwardIterator begin() { return ForwardIterator(m_pRoot); }
+        // ForwardIterator end() { return ForwardIterator(nullptr); }
+        ForwardIterator begin() const { return ForwardIterator(m_pRoot); }
+        ForwardIterator end() const { return ForwardIterator(nullptr); }
+
+        std::ostream& write(std::ostream& os) { return os << *this; }
+        std::istream& read(std::istream& is) { return is >> *this; }
+
+        friend std::ostream& operator <<(std::ostream& os, const LinkedList<Traits>& list) {
+            lock_guard lock(list.m_mutex);
+            auto first = true;
+            os << "[";
+            for (auto it = list.begin(); it != list.end(); ++it){
+                if (!first)
+                    os << ",";
+                os << *it;
+                first = false;
+            }
+            return os << "]";
+        }
+        
+        friend std::istream &operator >>(std::istream &is, LinkedList<Traits> &list) {
+            Delim d;
+            Node node;
+            list.clear();
+
+            is >> d;
+            if (is >> d && d != ']'){
+                is.unget();
+                while(is >> node >> d){
+                    list.push_back(node.getValue(), node.getRef());
+                    if (d == ']'){
+                        break;
+                    }
+                }    
+            }
+            return is;
+        }
+        
+        LinkedList& operator=(const LinkedList& another); // no se permite asignacion
 };
 
 
@@ -193,11 +181,24 @@ insert(...) empieza desde el nodo raiz
 */
 template <typename Traits>
 void LinkedList<Traits>::internalInsert(const value_type& value, Ref ref, NodePtr& rParent) {
-    if (rParent == nullptr || m_comp(value, rParent->getValue())) {
-        rParent = new Node(value, ref, rParent);
+    if (rParent == nullptr) {
+        rParent = new Node(value, ref, nullptr);
         m_pTail = rParent;
+        return;
+    } else if (m_comp(value, rParent->getValue())) {
+        rParent = new Node(value, ref, rParent);
         return;
     }
     internalInsert(value, ref, rParent->m_pNext);
+}
+
+template <typename Traits>
+template<typename Func, typename... Args>
+decltype(auto) LinkedList<Traits>::call(Func func, Args&&... args)
+{    lock_guard<mutex> lock(m_mutex);
+    if constexpr(is_void_v<invoke_result_t<Func, Node&, Args...>>)
+        ::call(begin(), end(), std::forward<Func>(func), std::forward<Args>(args)...);
+    else // return type is not void:
+        return ::call(begin(), end(), std::forward<Func>(func), std::forward<Args>(args)...);
 }
 #endif // __LINKEDLIST_H__
