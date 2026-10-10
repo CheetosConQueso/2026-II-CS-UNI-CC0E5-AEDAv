@@ -91,9 +91,9 @@ class LinkedList {
                 push_back(v.first, v.second);
         }
         virtual ~LinkedList(){ clear(); }
-        virtual void clear();
+        void clear();
 
-        void push_back(const value_type& value, Ref ref);
+        virtual void push_back(const value_type& value, Ref ref);
         bool empty() const { return m_pRoot == nullptr; }
         void insert(const value_type& value, Ref ref) {
             scoped_lock lock(m_mutex);
@@ -153,7 +153,7 @@ template <typename Traits>
 void LinkedList<Traits>::clear(){
     scoped_lock lock(m_mutex);
     ForwardIterator it = begin();
-    while (it != end()){
+    while (!empty()){
         ForwardIterator current = it;
         ++it;
         delete& (*current);
@@ -184,7 +184,7 @@ template <typename Traits>
 void LinkedList<Traits>::internalInsert(const value_type& value, Ref ref, NodePtr& rParent) {
     if (rParent == nullptr) { //para el caso vacio
         rParent = new Node(value, ref, nullptr);
-        m_pTail = rParent;
+        this->m_pTail = rParent;
         return;
     } else if (m_comp(value, rParent->getValue())) { //para las iteraciones
         rParent = new Node(value, ref, rParent);
