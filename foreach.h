@@ -8,12 +8,17 @@ using namespace std;
 template <typename Iterator, typename Func, typename... Args>
 decltype(auto) call(Iterator begin, Iterator end, Func func, Args&&... args) {
     if constexpr(is_void_v<invoke_result_t<Func, decltype(*begin), Args...>>) {
-        for (auto iter = begin; iter != end; ++iter)
-            func(*iter, std::forward<Args>(args)...);
+        for (auto iter = begin; iter != end;) {
+            auto& curr = *iter;
+            ++iter;
+            func(curr, std::forward<Args>(args)...);
+        }
     } else {
-        for (auto iter = begin; iter != end; ++iter) {
-            auto ret = func(*iter, std::forward<Args>(args)...);
-            if(ret) return *iter;
+        for (auto iter = begin; iter != end;) {
+            auto& curr = *iter;
+            ++iter;
+            auto ret = func(curr, std::forward<Args>(args)...);
+            if(ret) return curr;
         }
         throw std::runtime_error("call(): ningun elemento satisface el predicado");
     }
