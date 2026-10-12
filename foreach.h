@@ -17,8 +17,8 @@ decltype(auto) call(Iterator begin, Iterator end, Func func, Args&&... args) {
         for (auto iter = begin; iter != end;) {
             auto& curr = *iter;
             ++iter;
-            auto ret = func(curr, std::forward<Args>(args)...);
-            if(ret) return curr;
+            if (func(curr, std::forward<Args>(args)...))
+                return curr;
         }
         throw std::runtime_error("call(): ningun elemento satisface el predicado");
     }
