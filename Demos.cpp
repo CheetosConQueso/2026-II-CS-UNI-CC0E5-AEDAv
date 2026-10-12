@@ -6,7 +6,8 @@
 #include <vector>
 #include "foreach.h"
 #include "containers/vector.h"
-#include "containers/linkedlist.h"
+#include "containers/LinkedList.h"
+#include "containers/CircularLinkedList.h"
 #include "Demos.h"
 using namespace std;
 
@@ -207,7 +208,7 @@ void DemoLinkedList()
 
     // Prueba de clear
     list.clear();
-    cout << "LinkedList luego de usar clear" << list << endl;
+    cout << "LinkedList luego de usar clear:" << list << endl;
     list.push_back(10, 2);
     cout << "LinkedList luego de un nuevo push_back " << list << endl;
 
@@ -217,5 +218,47 @@ void DemoLinkedList()
     in >> new_list;
     in.close();
     cout << "LinkedList leida desde archivo: " << new_list << endl;
+    TestForwardTraversal(new_list);
+}
+
+void DemoCircularLinkedList()
+{
+    using IntCircularLinkedList = CircularLinkedList<LinkedListAscTraits<TX>>;
+
+    ofstream("circularlinkedlist.txt", ios::trunc).close();
+
+    // Pruebas de pushback
+    IntCircularLinkedList list;
+    TestContainer(list, {{5, 15}, {1, 11}, {8, 18}, {3, 13}}, "circularlinkedlist.txt");
+    TestForwardTraversal(list);
+
+    auto elements = std::vector<pair<TX, Ref>>({{0, 10}, {1, 11}, {2, 12}, {3, 13}, {4, 14}});
+    for(auto& e : elements)
+        list.push_back(e.first, e.second);
+
+    // Pruebas de insert
+    list.insert(4, 12);
+    list.insert(11, 20);
+    list.insert(7, 6);
+    cout << "CircularLinkedList luego de hacer 3 inserts " << list << endl;
+
+    // Prueba de apply function
+    list.ApplyFunction(AddOne);
+    cout << "CircularLinkedList tras usar Add One a sus elementos: " << list << endl;
+    list.ApplyFunction(AddX<TX>, TX(10));
+    cout << "CircularLinkedList tras usar AddX(10) a sus elementos: " << list << endl;
+
+    // Prueba de clear
+    list.clear();
+    cout << "CircularLinkedList luego de usar clear:" << list << endl;
+    list.push_back(10, 2);
+    cout << "CircularLinkedList luego de un nuevo push_back " << list << endl;
+
+    // Prueba de lectura
+    IntCircularLinkedList new_list;
+    ifstream in("circularlinkedlist.txt");
+    in >> new_list;
+    in.close();
+    cout << "CircularLinkedList leida desde archivo: " << new_list << endl;
     TestForwardTraversal(new_list);
 }
