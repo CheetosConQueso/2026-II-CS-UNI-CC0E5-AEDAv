@@ -9,6 +9,7 @@
 #include "containers/LinkedList.h"
 #include "containers/CircularLinkedList.h"
 #include "containers/DoublyLinkedList.h"
+#include "containers/CircularDoublyLinkedList.h"
 #include "Demos.h"
 using namespace std;
 
@@ -197,28 +198,28 @@ void DemoLinkedList()
         list.push_back(e.first, e.second);
 
     // Pruebas de insert
-    cout <<"--PRUEBAS DE INSERT--\n";
+    cout <<"-- PRUEBAS DE INSERT --\n";
     list.insert(4, 12);
     list.insert(11, 20);
     list.insert(7, 6);
     cout << "LinkedList luego de hacer 3 inserts:\n\t" << list << endl;
 
     // Prueba de apply function
-    cout <<"--PRUEBA DE APPLY FUNCTION--\n";
+    cout <<"-- PRUEBA DE APPLY FUNCTION --\n";
     list.ApplyFunction(AddOne);
     cout << "LinkedList tras usar Add One a sus elementos:\n\t" << list << endl;
     list.ApplyFunction(AddX<TX>, TX(10));
     cout << "LinkedList tras usar AddX(10) a sus elementos:\n\t" << list << endl;
 
     // Prueba de clear
-    cout <<"--PRUEBAS DE CLEAR--\n";
+    cout <<"-- PRUEBAS DE CLEAR --\n";
     list.clear();
     cout << "LinkedList luego de usar clear:\n\t" << list << endl;
     list.push_back(10, 2);
     cout << "LinkedList luego de un nuevo push_back:\n\t" << list << endl;
 
     // Prueba de lectura
-    cout <<"--PRUEBA DE LECTURA--\n";
+    cout <<"-- PRUEBA DE LECTURA --\n";
     IntLinkedList new_list;
     ifstream in("linkedlist.txt");
     in >> new_list;
@@ -234,7 +235,7 @@ void DemoCircularLinkedList()
     ofstream("circularlinkedlist.txt", ios::trunc).close();
 
     // Pruebas de pushback
-    cout <<"--PRUEBAS DE PUSHBACK--\n";
+    cout <<"-- PRUEBAS DE PUSHBACK --\n";
     IntCircularLinkedList list;
     TestContainer(list, {{5, 15}, {1, 11}, {8, 18}, {3, 13}}, "circularlinkedlist.txt");
     TestForwardTraversal(list);
@@ -245,28 +246,28 @@ void DemoCircularLinkedList()
     cout << "CircularLinkedList luego de hacer 5 pushback:\n\t" << list << endl;
     
     // Pruebas de insert
-    cout <<"--PRUEBAS DE INSERT--\n";
+    cout <<"-- PRUEBAS DE INSERT --\n";
     list.insert(4, 12);
     list.insert(11, 20);
     list.insert(7, 6);
     cout << "CircularLinkedList luego de hacer 3 inserts:\n\t" << list << endl;
 
     // Prueba de apply function
-    cout <<"--PRUEBA DE APPLY FUNCTION--\n";
+    cout <<"-- PRUEBA DE APPLY FUNCTION --\n";
     list.ApplyFunction(AddOne);
     cout << "CircularLinkedList tras usar Add One a sus elementos:\n\t" << list << endl;
     list.ApplyFunction(AddX<TX>, TX(10));
     cout << "CircularLinkedList tras usar AddX(10) a sus elementos:\n\t" << list << endl;
 
     // Prueba de clear
-    cout <<"--PRUEBAS DE CLEAR--\n";
+    cout <<"-- PRUEBAS DE CLEAR Y REINSERCION --\n";
     list.clear();
     cout << "CircularLinkedList luego de usar clear:\n\t" << list << endl;
     list.push_back(10, 2);
-    cout << "CircularLinkedList luego de un nuevo push_back:\n\t" << list << endl;
+    cout << "CircularLinkedList luego de reinsertar:\n\t" << list << endl;
 
     // Prueba de lectura
-    cout <<"--PRUEBA DE LECTURA--\n";
+    cout <<"-- PRUEBA DE LECTURA --\n";
     IntCircularLinkedList new_list;
     ifstream in("circularlinkedlist.txt");
     in >> new_list;
@@ -275,11 +276,11 @@ void DemoCircularLinkedList()
     TestForwardTraversal(new_list);
 }
 
-void DemoDoublYLinkedList()
+void DemoDoublyLinkedList()
 {
-    using IntDoublYLinkedList = DoublYLinkedList<DoublYLinkedListAscTraits<TX>>;
+    using IntDoublyLinkedList = DoublyLinkedList<DoublyLinkedListAscTraits<TX>>;
 
-    ofstream("doublYlinkedlist.txt", ios::trunc).close();
+    ofstream("doublylinkedlist.txt", ios::trunc).close();
 
     cout << "-- PRUEBAS DE PUSH_BACK --\n";
     IntDoublyLinkedList list;
@@ -300,12 +301,12 @@ void DemoDoublYLinkedList()
     list.ApplyFunction(AddOne);
     cout << "DoublyLinkedList tras usar AddOne:\n\t" << list << endl;
 
-    cout << "-- PRUEBAS DE CLEAR --\n";
+    cout << "-- PRUEBAS DE CLEAR Y REINSERCION --\n";
     list.clear();
     cout << "DoublyLinkedList luego de clear:\n\t" << list << endl;
     list.push_back(10, 2);
     list.push_back(5, 1);
-    cout << "DoublyLinkedList luego de insertar despues de clear:\n\t" << list << endl;
+    cout << "DoublyLinkedList luego de reinsertar:\n\t" << list << endl;
 
     cout << "-- PRUEBA DE LECTURA --\n";
     IntDoublyLinkedList loadedList;
@@ -314,4 +315,50 @@ void DemoDoublYLinkedList()
     in.close();
     cout << "DoublyLinkedList leida desde archivo:\n\t" << loadedList << endl;
     TestForwardTraversal(loadedList);
+}
+
+void DemoCircularDoublyLinkedList()
+{
+    using IntCircularDoublyLinkedList =
+        CircularDoublyLinkedList<CircularDoublyLinkedListAscTraits<TX>>;
+
+    ofstream("circulardoublylinkedlist.txt", ios::trunc).close();
+
+    cout << "-- PRUEBAS DE PUSH_BACK --\n";
+    IntCircularDoublyLinkedList list;
+    TestContainer(list, {{5, 15}, {1, 11}, {8, 18}, {3, 13}},
+                  "circulardoublylinkedlist.txt");
+    TestForwardTraversal(list);
+
+    cout << "-- PRUEBAS DE INSERT --\n";
+    list.insert(4, 12);
+    list.insert(11, 20);
+    list.insert(7, 6);
+    cout << "CircularDoublyLinkedList luego de insertar:\n\t" << list << endl;
+
+    cout << "Backward traversal:\n\t[";
+    list.rcall(PrintNode<typename IntCircularDoublyLinkedList::Node>, cout);
+    cout << "]" << endl;
+
+    cout << "-- PRUEBAS DE APPLY FUNCTION --\n";
+    list.ApplyFunction(AddOne);
+    cout << "CircularDoublyLinkedList tras usar AddOne:\n\t" << list << endl;
+
+    cout << "-- PRUEBAS DE CLEAR Y REINSERCION --\n";
+    list.clear();
+    cout << "CircularDoublyLinkedList luego de clear:\n\t" << list << endl;
+    list.push_back(10, 2);
+    list.push_back(5, 1);
+    cout << "CircularDoublyLinkedList despues de reinsertar:\n\t" << list << endl;
+
+    cout << "-- PRUEBA DE LECTURA --\n";
+    IntCircularDoublyLinkedList loadedList;
+    ifstream in("circulardoublylinkedlist.txt");
+    in >> loadedList;
+    in.close();
+    cout << "CircularDoublyLinkedList leida desde archivo:\n\t" << loadedList << endl;
+    TestForwardTraversal(loadedList);
+    cout << "Backward traversal de la lista leida:\n\t[";
+    loadedList.rcall(PrintNode<typename IntCircularDoublyLinkedList::Node>, cout);
+    cout << "]" << endl;
 }
