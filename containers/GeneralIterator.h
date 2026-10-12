@@ -12,7 +12,7 @@ public:
     using iterator_category = std::forward_iterator_tag;
     using difference_type   = std::ptrdiff_t;
     using value_type        = T;
-    using pointer           = value_type *;
+    using pointer           = value_type*;
     using reference         = value_type&;
 protected:
     pointer m_ptr;
