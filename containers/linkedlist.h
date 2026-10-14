@@ -119,15 +119,6 @@ class LinkedList {
             m_size  = 0;
         };
 
-        LinkedList& copyUnlocked(LinkedList& another) {     
-            clearUnlocked();
-            another.ApplyFunction([this](const Node& node) {
-                push_backUnlocked(node.getValue(), node.getRef());
-            });
-            m_comp = another.m_comp;
-            return *this;
-        }
-
     public:
         LinkedList() {}
         LinkedList(const LinkedList& another){ *this = another; } // copia profunda de la lista enlazada
@@ -215,7 +206,12 @@ class LinkedList {
         LinkedList& operator=(LinkedList& another) {
             if (this == &another) return *this;
             scoped_lock lock(m_mutex, another.m_mutex);  
-            return copyUnlocked(another);
+            clearUnlocked();
+            another.ApplyFunction([this](const Node& node) {
+                push_backUnlocked(node.getValue(), node.getRef());
+            });
+            m_comp = another.m_comp;
+            return *this;
         }
 };
 #endif // __LINKEDLIST_H__
