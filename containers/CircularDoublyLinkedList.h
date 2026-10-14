@@ -23,39 +23,27 @@ public:
     using BackwardIterator = typename Parent::BackwardIterator;
 
 protected:
-    void restoreCircularLinks() {
-        if (this->m_pRoot == nullptr) {
-            this->sentinel.m_pNext = nullptr;
-            this->sentinel.m_pPrev = nullptr;
-            return;
-        }
-
-        this->sentinel.m_pNext = this->m_pRoot;
-        this->sentinel.m_pPrev = this->m_pTail;
-        this->m_pRoot->m_pPrev = &this->sentinel;
-        this->m_pTail->m_pNext = &this->sentinel;
-    }
-
     void push_backUnlocked(NodePtr newNode) override {
         Parent::push_backUnlocked(newNode);
-        restoreCircularLinks();
+        this->sentinel.m_pNext = this->m_pRoot;
+        this->m_pRoot->m_pPrev = &this->sentinel;
     }
 
     void internalInsert(NodePtr newNode, NodePtr& currentPtr) override {
         Parent::internalInsert(newNode, currentPtr);
-        restoreCircularLinks();
+        this->sentinel.m_pNext = this->m_pRoot;
+        this->m_pRoot->m_pPrev = &this->sentinel;
     }
 
     void clearUnlocked() override {
         Parent::clearUnlocked();
-        restoreCircularLinks();
+        this->sentinel.m_pNext = nullptr;
+        this->sentinel.m_pPrev = nullptr;
     }
 
 public:
     BackwardIterator rbegin() {
-        return BackwardIterator(this->sentinel.m_pPrev
-            ? this->sentinel.m_pPrev
-            : &this->sentinel);
+        return BackwardIterator(this->sentinel.m_pPrev ? this->sentinel.m_pPrev : &this->sentinel);
     }
 
     BackwardIterator rend() {
