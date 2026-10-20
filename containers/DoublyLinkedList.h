@@ -20,10 +20,10 @@ public:
 };
 
 template <typename T>
-class DoublyLinkedListForwardIterator : public GeneralIterator<DoublyLinkedListForwardIterator<T>, DoublyLinkedListNode<T>> {
+class DoublyLinkedListForwardIterator : public ForwardIterator<DoublyLinkedListNode<T>> {
 public:
     using MySelf = DoublyLinkedListForwardIterator<T>;
-    using Parent = GeneralIterator<MySelf, DoublyLinkedListNode<T>>;
+    using Parent = ForwardIterator<DoublyLinkedListNode<T>>;
     using Parent::Parent;
 
     MySelf& operator++() {
@@ -33,10 +33,10 @@ public:
 };
 
 template <typename T>
-class DoublyLinkedListBackwardIterator : public GeneralIterator<DoublyLinkedListBackwardIterator<T>, DoublyLinkedListNode<T>> {
+class DoublyLinkedListBackwardIterator : public BackwardIterator<DoublyLinkedListNode<T>> {
 public:
     using MySelf = DoublyLinkedListBackwardIterator<T>;
-    using Parent = GeneralIterator<MySelf, DoublyLinkedListNode<T>>;
+    using Parent = BackwardIterator<DoublyLinkedListNode<T>>;
     using Parent::Parent;
 
     MySelf& operator++() {

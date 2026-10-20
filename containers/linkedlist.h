@@ -1,10 +1,20 @@
 #ifndef __LINKEDLIST_H__
 #define __LINKEDLIST_H__
+#include <iostream>
 #include <mutex>
 #include <utility>
 #include "GeneralNode.h"
 #include "GeneralIterator.h"
 #include "../foreach.h"
+
+template <typename Traits>
+class LinkedList;
+
+template <typename Traits>
+std::ostream& operator<<(std::ostream& os, const LinkedList<Traits>& list);
+
+template <typename Traits>
+std::istream& operator>>(std::istream& is, LinkedList<Traits>& list);
 
 
 template <typename T>
@@ -12,56 +22,46 @@ class LinkedListNode : public GeneralNode<T> {
     using Node      = LinkedListNode<T>;
     using NodePtr   = Node*;
 public:
-    NodePtr m_pNext = nullptr; // puntero al siguiente nodo, npara acceso directo necesita ser publico
+    NodePtr m_pNext = nullptr;
     LinkedListNode() : GeneralNode<T>(T{}, Ref{}), m_pNext(nullptr) {}
-    // añadir friend class añade otro typename al template
     LinkedListNode(const T& value, Ref ref, NodePtr pNext) : GeneralNode<T>(value, ref), m_pNext(pNext) {}
 };
 
 
 template <typename T>
-class LinkedListForwardIterator : public GeneralIterator<LinkedListForwardIterator<T>, LinkedListNode<T>> {
+class LinkedListForwardIterator : public ForwardIterator<LinkedListNode<T>> {
 public:
     using MySelf    = LinkedListForwardIterator<T>;
-    using Parent    = GeneralIterator<MySelf, LinkedListNode<T>>;
+    using Parent    = ForwardIterator<LinkedListNode<T>>;
     using Parent::Parent;
 
-    MySelf& operator++() { 
-        Parent::m_ptr = Parent::m_ptr->m_pNext; 
-        return *this; 
-    }
+    MySelf& operator++() override { Parent::m_ptr = Parent::m_ptr->m_pNext; return *this; }
 };
 
 
 template <typename T, typename CompareT>
-struct DefaultTraits {
+struct TraversingTraits {
     using value_type        = T;
     using Compare           = CompareT;
 };
 
+template <typename T>
+struct AscendingTraits : public TraversingTraits<T, std::less<T>> {};
 
 template <typename T>
-struct AscendingTraits : public DefaultTraits<T, std::less<T>> {
-};
+struct DescendingTraits : public TraversingTraits<T, std::greater<T>> {};
 
-
-template <typename T>
-struct DescendingTraits : public DefaultTraits<T, std::greater<T>> {
-};
-
-template <typename Traits>
+template <typename TraversingTraits>
 struct LinkedListTraits {
-    using value_type        = typename Traits::value_type;
-    using Compare           = typename Traits::Compare;
+    using value_type        = typename TraversingTraits::value_type;
+    using Compare           = typename TraversingTraits::Compare;
     using Node              = LinkedListNode<value_type>;
     using ForwardIterator   = LinkedListForwardIterator<value_type>;  // itera sobre Node, no sobre T
 };
 
-
 template <typename T>
 struct LinkedListAscTraits : public LinkedListTraits<AscendingTraits<T>> {
 };
-
 
 template <typename T>
 struct LinkedListDescTraits : public LinkedListTraits<DescendingTraits<T>> {
@@ -123,14 +123,12 @@ class LinkedList {
         LinkedList() {}
         LinkedList(const LinkedList& another){ *this = another; } // copia profunda de la lista enlazada
         LinkedList(initializer_list<pair<value_type, Ref>> values) {
-            for (const auto &value : values) 
-                push_back(value.first, value.second);
+            for (const auto& value : values) push_back(value.first, value.second);
         }
 
         virtual ~LinkedList() { clear(); }
         
         bool empty() const { return size() == 0; }
-        
         size_t size() const { return m_size; }
         
         void push_back(const value_type& value, Ref ref) {
@@ -151,7 +149,6 @@ class LinkedList {
         };
 
         ForwardIterator begin() { return ForwardIterator(m_pRoot ? m_pRoot : &sentinel); }
-        
         ForwardIterator end() { return ForwardIterator(&sentinel); }
 
         template <typename Func, typename... Args>
@@ -171,37 +168,9 @@ class LinkedList {
         std::ostream& write(std::ostream& os) { return os << *this; }
         std::istream& read(std::istream& is) { return is >> *this; }
         LinkedList& copy(LinkedList& another) { return *this = another; }
-
-        friend std::ostream& operator <<(std::ostream& os, const LinkedList<Traits>& list) {
-            scoped_lock lock(list.m_mutex);
-            if(list.empty()) 
-                return os;
-            
-            NodePtr current = list.m_pRoot;
-            os << "[";
-            while (current != &(list.sentinel)) {
-                os << *current;
-                current = current->m_pNext;
-                if (current != &(list.sentinel)) os << ",";
-            }
-            return os << "]";
-        }
         
-        friend std::istream &operator >>(std::istream &is, LinkedList<Traits> &list) {
-            Delim d;
-            Node node;
-            list.clear();
-
-            is >> d;
-            if (is >> d && d != ']'){
-                is.unget();
-                while(is >> node >> d) {
-                    list.push_back(node.getValue(), node.getRef());
-                    if (d == ']') break;
-                }    
-            }
-            return is;
-        }
+        friend std::ostream& operator<< <Traits>(std::ostream& os, const LinkedList& list);
+        friend std::istream& operator>> <Traits>(std::istream& is, LinkedList& list);
 
         LinkedList& operator=(LinkedList& another) {
             if (this == &another) return *this;

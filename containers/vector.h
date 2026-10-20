@@ -8,28 +8,26 @@
 #include "../types.h" // Ref
 using namespace std;
 
-template <typename T>
-class VectorForwardIterator : public GeneralIterator<VectorForwardIterator<T>, T> {
+template <typename Node>
+class VectorForwardIterator : public ForwardIterator<Node> {
 public:
-    using value_type        = T;
-    using MySelf            = VectorForwardIterator<T>;
-    using Parent            = GeneralIterator<MySelf, T>;
+    using MySelf            = VectorForwardIterator<Node>;
+    using Parent            = ForwardIterator<Node>;
     using Parent::Parent; // Inherit constructor
 
     // Prefix increment
-    VectorForwardIterator& operator++() { ++Parent::m_ptr; return *this; }
+    MySelf& operator++() { ++Parent::m_ptr; return *this; }
 };
 
-template <typename T>
-class VectorBackwardIterator : public GeneralIterator<VectorBackwardIterator<T>, T> {
+template <typename Node>
+class VectorBackwardIterator : public BackwardIterator<Node> {
 public:
-    using value_type        = T;
-    using MySelf            = VectorBackwardIterator<T>;
-    using Parent            = GeneralIterator<MySelf, T>;
+    using MySelf            = VectorBackwardIterator<Node>;
+    using Parent            = BackwardIterator<Node>;
     using Parent::Parent; // Inherit constructor
 
     // Prefix increment
-    VectorBackwardIterator& operator++() { --Parent::m_ptr; return *this; }
+    MySelf& operator++() { --Parent::m_ptr; return *this; }
 };
 
 template <typename T>

@@ -7,6 +7,7 @@
 #include "foreach.h"
 #include "containers/vector.h"
 #include "containers/LinkedList.h"
+#include "ListIOStream.h"
 #include "containers/CircularLinkedList.h"
 #include "containers/DoublyLinkedList.h"
 #include "containers/CircularDoublyLinkedList.h"
