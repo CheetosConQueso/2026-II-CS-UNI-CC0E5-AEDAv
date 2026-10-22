@@ -37,9 +37,11 @@ class Container {
 
     public:
         Container() {}
+        Container(const Container& another) { *this = another; }
+        
         virtual ~Container() = default ;
 
-        size_t size() const { return m_size; }
+        virtual size_t size() const { return m_size; } 
         bool empty() const  { return size() == 0; }
 
         virtual ForwardIterator         begin()         = 0;
@@ -57,12 +59,35 @@ class Container {
             clearUnlocked();
         };
 
-        template <typename Func, typename... Args> void ApplyFunction(Func func, Args... args) { call(func, std::forward<Args>(args)...); }
-        template <typename Func, typename... Args> void cApplyFunction(Func func, Args... args) const { ccall(func, std::forward<Args>(args)...); }
-        template <typename Func, typename... Args> Node& FirstThat(Func func, Args... args) { return call(func, std::forward<Args>(args)...); }    
-        template <typename Func, typename... Args> const Node& cFirstThat(Func func, Args... args) const { return ccall(func, std::forward<Args>(args)...); }    
-        template <typename Func, typename... Args> decltype(auto) call(Func func, Args&&... args) { return ::call(begin(), end(), std::forward<Func>(func), std::forward<Args>(args)...); }
-        template <typename Func, typename... Args> decltype(auto) ccall(Func func, Args&&... args) const { return ::ccall(cbegin(), cend(), std::forward<Func>(func), std::forward<Args>(args)...); }
+        template <typename Func, typename... Args> 
+        void ApplyFunction(Func func, Args... args) { 
+            call(func, std::forward<Args>(args)...); 
+        }
+        
+        template <typename Func, typename... Args> 
+        void cApplyFunction(Func func, Args... args) const { 
+            ccall(func, std::forward<Args>(args)...); 
+        }
+
+        template <typename Func, typename... Args> 
+        Node& FirstThat(Func func, Args... args) { 
+            return call(func, std::forward<Args>(args)...); 
+        }    
+
+        template <typename Func, typename... Args> 
+        const Node& cFirstThat(Func func, Args... args) const { 
+            return ccall(func, std::forward<Args>(args)...); 
+        }  
+
+        template <typename Func, typename... Args> 
+        decltype(auto) call(Func func, Args&&... args) { 
+            return ::call(begin(), end(), std::forward<Func>(func), std::forward<Args>(args)...); 
+        }
+
+        template <typename Func, typename... Args> 
+        decltype(auto) ccall(Func func, Args&&... args) const { 
+            return ::ccall(cbegin(), cend(), std::forward<Func>(func), std::forward<Args>(args)...); 
+        }
 
         friend std::ostream& operator<<(std::ostream& os, const Container<Traits>& container) {
             std::scoped_lock lock(container.m_mutex);
@@ -98,7 +123,7 @@ class Container {
             return is;
         }
 
-        virtual Container& operator=(const Container& another) {
+        Container& operator=(const Container& another) {
             if (this == &another) return *this;
 
             scoped_lock lock(m_mutex, another.m_mutex);  

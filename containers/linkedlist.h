@@ -73,12 +73,29 @@ class LinkedList : public Container<Traits> {
     }
 
     ~LinkedList() override { this->clear(); }
-    
+
+    void insert(const value_type& v, Ref r) { 
+        scoped_lock lock(Parent::m_mutex);
+        internalInsert(v, r);
+    }
+
+    ForwardIterator      begin()  override       { return ForwardIterator(m_pRoot ? m_pRoot : &sentinel); }
+    ForwardIterator      end()    override       { return ForwardIterator(&sentinel); }
+    ConstForwardIterator cbegin() const override { return ConstForwardIterator(m_pRoot ? m_pRoot : &sentinel); }
+    ConstForwardIterator cend()   const override { return ConstForwardIterator(&sentinel); }
+
     protected:
     NodePtr m_pRoot = nullptr; 
     NodePtr m_pTail = nullptr;
     Node sentinel;
 
+    void clearUnlocked() override {
+        Parent::ApplyFunction([](Node& node) { delete &node; });
+        m_pRoot = nullptr;
+        m_pTail = nullptr;
+        Parent::m_size  = 0;
+    };
+    
     void push_backUnlocked(const value_type& value, Ref ref) override {
         NodePtr nodePtr = new Node(value, ref, &sentinel);
         push_backUnlocked(nodePtr);
@@ -94,13 +111,6 @@ class LinkedList : public Container<Traits> {
         }
         ++Parent::m_size;
     }
-
-    void clearUnlocked() override {
-        Parent::ApplyFunction([](Node& node) { delete &node; });
-        m_pRoot = nullptr;
-        m_pTail = nullptr;
-        Parent::m_size  = 0;
-    };
 
     virtual void internalInsert(const value_type& value, Ref ref) {
         NodePtr nodePtr = new Node(value, ref, nullptr);
@@ -123,18 +133,5 @@ class LinkedList : public Container<Traits> {
         
         push_backUnlocked(nodePtr);
     }
-
-    public:
-    LinkedList(const LinkedList& another) { *this = another; }
-
-    void insert(const value_type& v, Ref r) { 
-        scoped_lock lock(Parent::m_mutex);
-        internalInsert(v, r);
-    }
-
-    ForwardIterator      begin()  override       { return ForwardIterator(m_pRoot ? m_pRoot : &sentinel); }
-    ForwardIterator      end()    override       { return ForwardIterator(&sentinel); }
-    ConstForwardIterator cbegin() const override { return ConstForwardIterator(m_pRoot ? m_pRoot : &sentinel); }
-    ConstForwardIterator cend()   const override { return ConstForwardIterator(&sentinel); }
 };
 #endif // __LINKEDLIST_H__
