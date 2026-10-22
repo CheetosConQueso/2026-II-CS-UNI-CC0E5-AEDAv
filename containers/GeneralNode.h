@@ -3,10 +3,10 @@
 #include <iostream>
 #include "../types.h" // Ref
 template <typename T>
-struct GeneralNode{
+class GeneralNode{
 private:
     T   m_value;
-    Ref m_ref;      // Reference to the value
+    Ref m_ref; //identificador para el valor
 
 public:
     GeneralNode() = default; // requerido por resize(): new Node[new_cap]
@@ -24,9 +24,28 @@ public:
 
     friend std::istream &operator >>(std::istream &is, GeneralNode<T> &node){
         Delim d;
-        is >> d >> node.m_value >> d >> node.m_ref >> d;
+        T value;
+        Ref ref;
+
+        if (!(is >> std::ws >> d) || d != '(') {
+            is.setstate(std::ios::failbit);
+            return is;
+        }
+
+        if (!(is >> std::ws >> value >> std::ws >> d) || d != ',') {
+            is.setstate(std::ios::failbit);
+            return is;
+        }
+
+        if (!(is >> std::ws >> ref >> std::ws >> d) || d != ')') {
+            is.setstate(std::ios::failbit);
+            return is;
+        }
+
+        node.m_value = value;
+        node.m_ref = ref;
+
         return is;
     }
 };
-
 #endif // __GENERAL_NODE_H__

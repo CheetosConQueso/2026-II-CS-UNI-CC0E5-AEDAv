@@ -5,7 +5,7 @@
 template <typename Traits>
 class CircularLinkedList : public LinkedList<Traits> {
     public:
-        using Parent = LinkedList<Traits>;
+        using Parent    = LinkedList<Traits>;
 
     protected:
         void push_backUnlocked(Parent::NodePtr newNode) override {
@@ -14,8 +14,8 @@ class CircularLinkedList : public LinkedList<Traits> {
                 this->sentinel.m_pNext = this->m_pRoot;
         }
 
-        void internalInsert(Parent::NodePtr newNode, Parent::NodePtr&currentPtr) override {
-            Parent::internalInsert(newNode, currentPtr);
+        void internalInsert(Parent::NodePtr newNode) override {
+            Parent::internalInsert(newNode);
             this->sentinel.m_pNext = this->m_pRoot;
         }
 

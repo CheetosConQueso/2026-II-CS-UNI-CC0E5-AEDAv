@@ -3,11 +3,11 @@
 
 #include <iostream>
 #include <mutex>
-#include "containers/LinkedList.h"
+#include "Container.h"
 
 template <typename Traits>
-std::ostream& operator<<(std::ostream& os, const LinkedList<Traits>& list) {
-    std::scoped_lock lock(list.m_mutex);
+std::ostream& operator<<(std::ostream& os, const Container<Traits>& container) {
+    std::scoped_lock lock(container.m_mutex);
 
     os << '[';
     auto currentPtr = list.m_pRoot;

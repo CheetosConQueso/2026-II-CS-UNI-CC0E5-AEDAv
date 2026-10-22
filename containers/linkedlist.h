@@ -1,36 +1,28 @@
 #ifndef __LINKEDLIST_H__
 #define __LINKEDLIST_H__
+#include <initializer_list>
 #include <iostream>
 #include <mutex>
-#include <utility>
 #include "GeneralNode.h"
-#include "GeneralIterator.h"
+#include "Iterator.h"
 #include "../foreach.h"
-
-template <typename Traits>
-class LinkedList;
-
-template <typename Traits>
-std::ostream& operator<<(std::ostream& os, const LinkedList<Traits>& list);
-
-template <typename Traits>
-std::istream& operator>>(std::istream& is, LinkedList<Traits>& list);
-
+#include "Container.h"
 
 template <typename T>
 class LinkedListNode : public GeneralNode<T> {
+    public:
     using Node      = LinkedListNode<T>;
     using NodePtr   = Node*;
-public:
+
     NodePtr m_pNext = nullptr;
+    
     LinkedListNode() : GeneralNode<T>(T{}, Ref{}), m_pNext(nullptr) {}
     LinkedListNode(const T& value, Ref ref, NodePtr pNext) : GeneralNode<T>(value, ref), m_pNext(pNext) {}
 };
 
-
 template <typename T>
 class LinkedListForwardIterator : public ForwardIterator<LinkedListNode<T>> {
-public:
+    public:
     using MySelf    = LinkedListForwardIterator<T>;
     using Parent    = ForwardIterator<LinkedListNode<T>>;
     using Parent::Parent;
@@ -38,149 +30,111 @@ public:
     MySelf& operator++() override { Parent::m_ptr = Parent::m_ptr->m_pNext; return *this; }
 };
 
-
-template <typename T, typename CompareT>
-struct TraversingTraits {
-    using value_type        = T;
-    using Compare           = CompareT;
+template <typename T>
+class LinkedListConstForwardIterator : public ConstForwardIterator<LinkedListNode<T>> {
+    public:
+    using MySelf    = LinkedListConstForwardIterator<T>;
+    using Parent    = ConstForwardIterator<LinkedListNode<T>>;
+    using Parent::Parent;
+    
+    MySelf& operator++() override { Parent::m_ptr = Parent::m_ptr->m_pNext; return *this; }
 };
 
-template <typename T>
-struct AscendingTraits : public TraversingTraits<T, std::less<T>> {};
-
-template <typename T>
-struct DescendingTraits : public TraversingTraits<T, std::greater<T>> {};
-
-template <typename TraversingTraits>
+template <typename CompareTraits>
 struct LinkedListTraits {
-    using value_type        = typename TraversingTraits::value_type;
-    using Compare           = typename TraversingTraits::Compare;
-    using Node              = LinkedListNode<value_type>;
-    using ForwardIterator   = LinkedListForwardIterator<value_type>;  // itera sobre Node, no sobre T
+    using value_type            = typename CompareTraits::value_type;
+    using Compare               = typename CompareTraits::Compare;
+    
+    using Node                  = LinkedListNode<value_type>;
+    using ForwardIterator       = LinkedListForwardIterator<value_type>;
+    using ConstForwardIterator  = LinkedListConstForwardIterator<value_type>;
 };
 
-template <typename T>
-struct LinkedListAscTraits : public LinkedListTraits<AscendingTraits<T>> {
-};
-
-template <typename T>
-struct LinkedListDescTraits : public LinkedListTraits<DescendingTraits<T>> {
-};
+template <typename T> struct LinkedListAscTraits : public LinkedListTraits<AscendingTraits<T>> {};
+template <typename T> struct LinkedListDescTraits : public LinkedListTraits<DescendingTraits<T>> {};
 
 
 template <typename Traits>
-class LinkedList {
+class LinkedList : public Container<Traits> {
     public:
-        using value_type        = typename Traits::value_type;
-        using Node              = typename Traits::Node;
-        using NodePtr           = Node *;
-        using ForwardIterator   = typename Traits::ForwardIterator;
-        using Compare           = typename Traits::Compare;
-        using Delim             = typename Node::Delim;
+    using Parent                = Container<Traits>;
+    using value_type            = typename Parent::value_type;
+    using Node                  = typename Parent::Node;
+    using Compare               = typename Parent::Compare;
+    using ForwardIterator       = typename Parent::ForwardIterator;
+    using ConstForwardIterator  = typename Parent::ConstForwardIterator;
+    using Delim                 = typename Parent::Delim;
+    using NodePtr               = Node *;
+    using Parent::Parent;
+
+    LinkedList(initializer_list<pair<value_type, Ref>> values) {
+        for (const auto& value : values)
+            this->push_back(value.first, value.second);
+    }
+
+    ~LinkedList() override { this->clear(); }
     
     protected:
-        NodePtr m_pRoot = nullptr; // puntero al primer nodo de la lista enlazada
-        NodePtr m_pTail = nullptr; // puntero al último nodo de la lista enlazada
-        size_t m_size = 0; // cantidad de nodos en la lista enlazada
-        Compare m_comp; // comparador para ordenar los nodos de la lista
-        Node sentinel;
-        mutable std::mutex m_mutex; // mutex para sincronización
+    NodePtr m_pRoot = nullptr; 
+    NodePtr m_pTail = nullptr;
+    Node sentinel;
 
-        virtual void push_backUnlocked(NodePtr newNode) {
-            if (empty()) {
-                m_pRoot = m_pTail = newNode;
-            } else {
-                m_pTail->m_pNext = newNode;
-                m_pTail = newNode;
-            }
-            ++m_size;
+    void push_backUnlocked(const value_type& value, Ref ref) override {
+        NodePtr nodePtr = new Node(value, ref, &sentinel);
+        push_backUnlocked(nodePtr);
+    }
+
+    void push_backUnlocked(NodePtr nodePtr) override {
+        nodePtr->m_pNext = &sentinel;
+        if (Parent::empty()) {
+            m_pRoot = m_pTail = nodePtr;
+        } else {
+            m_pTail->m_pNext = nodePtr;
+            m_pTail = nodePtr;
         }
+        ++Parent::m_size;
+    }
 
-        virtual void internalInsert(NodePtr newNode, NodePtr&currentPtr) {
-            if(empty() || currentPtr == &sentinel) {
-                newNode->m_pNext = &sentinel;
-                currentPtr  = newNode;
-                m_pTail     = newNode;  
-                ++m_size;
-                return;
-            } else if(m_comp(newNode->getValue(), currentPtr->getValue())) {
-                newNode->m_pNext = currentPtr;
-                currentPtr = newNode;
-                ++m_size;
+    void clearUnlocked() override {
+        Parent::ApplyFunction([](Node& node) { delete &node; });
+        m_pRoot = nullptr;
+        m_pTail = nullptr;
+        Parent::m_size  = 0;
+    };
+
+    virtual void internalInsert(const value_type& value, Ref ref) {
+        NodePtr nodePtr = new Node(value, ref, nullptr);
+        internalInsert(nodePtr);
+    }
+
+    virtual void internalInsert(NodePtr nodePtr) {
+        if (Parent::empty()) return push_backUnlocked(nodePtr);
+
+        NodePtr* currentPtr = &m_pRoot;
+        while (*currentPtr != &sentinel) {
+            if(Parent::m_comp(nodePtr->getValue(), (*currentPtr)->getValue())) {
+                nodePtr->m_pNext = *currentPtr;
+                *currentPtr = nodePtr;
+                ++Parent::m_size;
                 return;
             }
-            LinkedList::internalInsert(newNode, currentPtr->m_pNext);
+            currentPtr = &(*currentPtr)->m_pNext;
         }
-
-        virtual void clearUnlocked() {
-            ApplyFunction([](Node& node) { delete &node; });
-            m_pRoot = nullptr;
-            m_pTail = nullptr;
-            m_size  = 0;
-        };
+        
+        push_backUnlocked(nodePtr);
+    }
 
     public:
-        LinkedList() {}
-        LinkedList(const LinkedList& another){ *this = another; } // copia profunda de la lista enlazada
-        LinkedList(initializer_list<pair<value_type, Ref>> values) {
-            for (const auto& value : values) push_back(value.first, value.second);
-        }
+    LinkedList(const LinkedList& another) { *this = another; }
 
-        virtual ~LinkedList() { clear(); }
-        
-        bool empty() const { return size() == 0; }
-        size_t size() const { return m_size; }
-        
-        void push_back(const value_type& value, Ref ref) {
-            scoped_lock lock(m_mutex);
-            NodePtr newNode = new Node(value, ref, &sentinel);
-            push_backUnlocked(newNode);
-        }
-    
-        void insert(const value_type& value, Ref ref) { 
-            scoped_lock lock(m_mutex); 
-            NodePtr newNode = new Node(value, ref, nullptr);
-            internalInsert(newNode, m_pRoot);
-        }
+    void insert(const value_type& v, Ref r) { 
+        scoped_lock lock(Parent::m_mutex);
+        internalInsert(v, r);
+    }
 
-        void clear() {
-            scoped_lock lock(m_mutex);
-            clearUnlocked();
-        };
-
-        ForwardIterator begin() { return ForwardIterator(m_pRoot ? m_pRoot : &sentinel); }
-        ForwardIterator end() { return ForwardIterator(&sentinel); }
-
-        template <typename Func, typename... Args>
-        void ApplyFunction(Func func, Args... args) { call(func, std::forward<Args>(args)...); }
-        
-        template <typename Func, typename... Args>
-        Node& FirstThat(Func func, Args... args) { return call(func, std::forward<Args>(args)...); }
-
-        template<typename Func, typename... Args>
-        decltype(auto) call(Func func, Args&&... args) {
-            if constexpr(is_void_v<invoke_result_t<Func, Node&, Args...>>)
-                ::call(begin(), end(), std::forward<Func>(func), std::forward<Args>(args)...);
-            else // return type is not void:
-                return ::call(begin(), end(), std::forward<Func>(func), std::forward<Args>(args)...);
-        };
-
-        std::ostream& write(std::ostream& os) { return os << *this; }
-        std::istream& read(std::istream& is) { return is >> *this; }
-        LinkedList& copy(LinkedList& another) { return *this = another; }
-        
-        friend std::ostream& operator<< <Traits>(std::ostream& os, const LinkedList& list);
-        friend std::istream& operator>> <Traits>(std::istream& is, LinkedList& list);
-
-        LinkedList& operator=(LinkedList& another) {
-            if (this == &another) return *this;
-            scoped_lock lock(m_mutex, another.m_mutex);  
-            clearUnlocked();
-            another.ApplyFunction([this](const Node& node) {
-                push_backUnlocked(node.getValue(), node.getRef());
-            });
-            m_comp = another.m_comp;
-            return *this;
-        }
+    ForwardIterator      begin()  override       { return ForwardIterator(m_pRoot ? m_pRoot : &sentinel); }
+    ForwardIterator      end()    override       { return ForwardIterator(&sentinel); }
+    ConstForwardIterator cbegin() const override { return ConstForwardIterator(m_pRoot ? m_pRoot : &sentinel); }
+    ConstForwardIterator cend()   const override { return ConstForwardIterator(&sentinel); }
 };
 #endif // __LINKEDLIST_H__

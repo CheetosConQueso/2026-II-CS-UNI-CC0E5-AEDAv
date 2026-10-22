@@ -29,8 +29,8 @@ protected:
         this->m_pRoot->m_pPrev = &this->sentinel;
     }
 
-    void internalInsert(NodePtr newNode, NodePtr& currentPtr) override {
-        Parent::internalInsert(newNode, currentPtr);
+    void internalInsert(NodePtr newNode) override {
+        Parent::internalInsert(newNode);
         this->sentinel.m_pNext = this->m_pRoot;
         this->m_pRoot->m_pPrev = &this->sentinel;
     }

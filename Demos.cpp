@@ -7,7 +7,6 @@
 #include "foreach.h"
 #include "containers/vector.h"
 #include "containers/LinkedList.h"
-#include "ListIOStream.h"
 #include "containers/CircularLinkedList.h"
 #include "containers/DoublyLinkedList.h"
 #include "containers/CircularDoublyLinkedList.h"
@@ -112,11 +111,20 @@ void TestForwardTraversal(Container &container){
     cout << "]" << endl;
 
     // Prueba de FirstThat(): primer nodo cuyo valor sea mayor que el primero
-    if (container.begin() != container.end()) {
-        auto threshold = (*container.begin()).getValue();
-        Node &found = container.FirstThat(IsGreaterThan<Node, decltype(threshold)>, threshold);
-        cout << "FirstThat (primer valor > " << threshold << "):\n\t" << found << endl;
-    }
+    Node threshold{};
+    bool first = true;
+
+    const Node& found = container.cFirstThat([&](const Node& node) {
+        if (first) {
+            threshold = node;
+            first = false;
+            return false;
+        }
+
+        return node.getValue() > threshold.getValue();
+    });
+    cout << "FirstThat (primer valor > " << threshold << "):\n\t" << found << endl;
+
 }
 
 void DemoVector() {
