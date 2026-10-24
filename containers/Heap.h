@@ -9,7 +9,7 @@ struct HeapTraits {
     using Compare               = typename CompareTraits::Compare;
     using Node                  = GeneralNode<value_type>;
     using ForwardIterator       = VectorForwardIterator<Node>;
-    using ConstForwardIterator  = VectorConstForwardIterator<Node>;
+    using ConstForwardIterator  = VectorForwardIterator<Node,true>;
 };
 
 template <typename T>
@@ -28,9 +28,11 @@ class Heap : public Container<Traits> {
     using Node                  = Parent::Node;
     using ForwardIterator       = Parent::ForwardIterator;
     using ConstForwardIterator  = Parent::ConstForwardIterator;
-    using vTraits               = Traits::vTraits;
     using NodePtr               = Node*;
     using Parent::Parent;
+    using Parent::size;
+    using Parent::empty;
+    using Parent::call;
 
     Node pop_back() {
         scoped_lock lock(m_mutex);
@@ -39,9 +41,9 @@ class Heap : public Container<Traits> {
         
         std::swap(m_data[0], m_data[size() - 1]);
         Node ret = m_data.pop_back();
-        heapifyDown(0);
         --m_size;
-
+        heapifyDown(0);
+        
         return ret;
     }
 
@@ -60,9 +62,6 @@ class Heap : public Container<Traits> {
     ConstForwardIterator cend() const override { return m_data.cend(); }
     
     protected:
-    using Parent::size;
-    using Parent::empty;
-    using Parent::call;
     using Parent::m_mutex;
     using Parent::m_comp;
     using Parent::m_size;
@@ -70,7 +69,7 @@ class Heap : public Container<Traits> {
     Vector<VectorAscTraits<value_type>> m_data;
 
     void clearUnlocked () override {
-        m_data.clearUnlocked();
+        m_data.clear();
         m_size = 0;
     }
         
@@ -80,9 +79,9 @@ class Heap : public Container<Traits> {
     }
 
     void push_backUnlocked(NodePtr nodePtr) {
-        m_data.push_backUnlocked(nodePtr);
-        heapifyUp(size());
+        m_data.push_back(nodePtr->getValue(),nodePtr->getRef());
         ++m_size;
+        heapifyUp(size());
     }
 
     void heapifyUp(size_t index) {
@@ -108,7 +107,7 @@ class Heap : public Container<Traits> {
             Node left = getLeftChild(index);
             size_t bestIndex = index * 2 + 1;
 
-            if (hasRightChild()) {
+            if (hasRightChild(index)) {
                 Node right = getRightChild(index);
                 if (m_comp(right.getValue(), left.getValue())) ++bestIndex;
             }

@@ -13,5 +13,7 @@ int main() {
     DemoCircularLinkedList();
     DemoDoublyLinkedList();
     DemoCircularDoublyLinkedList();
+    DemoHeap();
+    DemoBinaryTree();
     return 0;
 }

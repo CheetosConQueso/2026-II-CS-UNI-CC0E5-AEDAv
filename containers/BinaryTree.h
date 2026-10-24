@@ -2,7 +2,7 @@
 #define __BINARYTREE_H__
 
 #include "vector.h"
-#include "types.h"
+#include "../types.h"
 
 template <typename T>
 class BinaryTreeNode : public GeneralNode<T> {
@@ -16,9 +16,9 @@ public:
 
     NodePtr m_pChild[2] = {nullptr, nullptr}; // left and right children
 
-    MySelf() = default;
-    MySelf(NodePtr left, NodePtr right) : m_pChild{left, right} {}
-    MySelf(const value_type& value, Ref ref, NodePtr left, NodePtr right) : Parent(value, ref), m_pChild{left, right} {}
+    BinaryTreeNode() = default;
+    BinaryTreeNode(NodePtr left, NodePtr right) : m_pChild{left, right} {}
+    BinaryTreeNode(const value_type& value, Ref ref, NodePtr left, NodePtr right) : Parent(value, ref), m_pChild{left, right} {}
     
     bool hasLeft() const  { return m_pChild[0] != nullptr; }
     bool hasRight() const { return m_pChild[1] != nullptr; }
@@ -38,17 +38,21 @@ public:
     using Node      = BinaryTreeNode<T>;
     using Parent    = Iterator<Node,IsConst>;
     using NodePtr   = typename Parent::pointer;
-    using Parent::set();
+    using Parent::set;
 
-    MySelf(NodePtr ptr) : Parent(ptr) { if (ptr) pushChildren(ptr); }
+    BinaryTreePreorderIterator(NodePtr ptr) : Parent(ptr) { if (ptr) pushChildren(ptr); }
 
     MySelf& operator++() override {
-        if (stack.empty()) return set(nullptr);
+        if (stack.empty()) {
+            set(nullptr);
+            return *this;
+        }
 
         NodePtr next = stack.pop_back().getValue();
 
         pushChildren(next);
-        return set(next);
+        set(next);
+        return *this;
     }
 
 private:
@@ -68,9 +72,9 @@ public:
     using Node      = BinaryTreeNode<T>;
     using Parent    = Iterator<Node,IsConst>;
     using NodePtr   = typename Parent::pointer;
-    using Parent::set();
+    using Parent::set;
     
-    MySelf(NodePtr ptr) : Parent(ptr) {
+    BinaryTreeRightFirstPostorderIterator(NodePtr ptr) : Parent(ptr) {
         if (!ptr) return;
         
         NodePtr curr = ptr;
@@ -83,8 +87,11 @@ public:
         set(curr);
     }
     
-    friend MySelf& operator++() {
-        if (stack.empty()) return set(nullptr);
+    MySelf& operator++() override {
+        if (stack.empty()) {
+            set(nullptr);
+            return *this;
+        }
         
         NodePtr parent = stack.pop_back().getValue();
 
@@ -98,9 +105,11 @@ public:
                 if (curr->hasRight()) curr = curr->getRight();
                 else curr = curr->getLeft();
             }
-            return set(curr);
+            set(curr);
+            return *this;
         }
-        return set(parent);
+        set(parent);
+        return *this;
     }
 
 private:
@@ -174,18 +183,19 @@ class BinaryTree : public Container<Traits>, public ReverseIterable<Traits> {
     BackwardIterator rend() override   { return BackwardIterator(nullptr); }
     ConstForwardIterator cbegin() const override  { return ConstForwardIterator(m_pRoot); }
     ConstForwardIterator cend() const override    { return ConstForwardIterator(nullptr); }
-    ConstBackwardIterator rbegin() const override { return BackwardIterator(m_pRoot); }
-    ConstBackwardIterator rend() const override   { return BackwardIterator(nullptr); }
+    ConstBackwardIterator crbegin() const override { return ConstBackwardIterator(m_pRoot); }
+    ConstBackwardIterator crend() const override   { return ConstBackwardIterator(nullptr); }
     
     friend std::ostream& operator<<(std::ostream& os, const BinaryTree<Traits>& tree) {
         std::scoped_lock lock(tree.m_mutex);
 
-        if(tree.m_pRoot == nullptr) return;
+        if(tree.m_pRoot == nullptr) return os;
         
-        Vector<VectorAscTraits<NodePtr>> queue({tree.m_pRoot, 0});
+        Vector<VectorAscTraits<NodePtr>> queue;
+        queue.push_back(tree.m_pRoot, 0);
         size_t lvlEnd = 0;
         
-        os << *m_pRoot <<endl;
+        os << *tree.m_pRoot <<endl;
 
         for (size_t i = 0; i < queue.size(); i++) {
             NodePtr curr = queue[i].getValue();
@@ -202,12 +212,13 @@ class BinaryTree : public Container<Traits>, public ReverseIterable<Traits> {
                 queue.push_back(right, 0);
             }
             os << "]";
-            if (i == levelEnd) {
+            if (i == lvlEnd) {
                 os <<endl;
                 lvlEnd = queue.size() - 1;
                 if (queue.size() == tree.size()) break;
             }
         }
+        return os;
     }
 
     protected:
@@ -216,12 +227,12 @@ class BinaryTree : public Container<Traits>, public ReverseIterable<Traits> {
     using Parent::m_mutex;
 
     NodePtr m_pRoot = nullptr;
-    void push_backUnlocked(const value_type&, Ref) override {
+    void push_backUnlocked(const value_type& value, Ref ref) override {
         NodePtr nodePtr = new Node(value, ref);
         push_backUnlocked(nodePtr);
     };
 
-    void push_backUnlocked(NodePtr) override {
+    void push_backUnlocked(NodePtr nodePtr) override {
         internalInsert(nodePtr);
     };
     
