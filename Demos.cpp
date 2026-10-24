@@ -5,6 +5,8 @@
 #include <thread>
 #include <vector>
 #include "foreach.h"
+#include "Container.h"
+#include "ContainerIO.h"
 #include "containers/vector.h"
 #include "containers/LinkedList.h"
 #include "containers/CircularLinkedList.h"
