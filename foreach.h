@@ -7,18 +7,45 @@ using namespace std;
 
 template <typename Iterator, typename Func, typename... Args>
 decltype(auto) call(Iterator begin, Iterator end, Func func, Args&&... args) {
-    if constexpr(is_void_v<invoke_result_t<Func, decltype(*begin), Args...>>) {
-        for (auto iter = begin; iter != end; ++iter)
-            func(*iter, std::forward<Args>(args)...);
+    using Result = invoke_result_t<Func&, decltype(*begin), Args...>;
+    
+    if constexpr(is_void_v<Result>) {
+        for (auto iter = begin; iter != end;) {
+            auto& curr = *iter; 
+            ++iter;
+            func(curr, std::forward<Args>(args)...);
+        }
     } else {
-        for (auto iter = begin; iter != end; ++iter) {
-            auto ret = func(*iter, std::forward<Args>(args)...);
-            if(ret) return *iter;
+        for (auto iter = begin; iter != end;) {
+            auto& curr = *iter; 
+            ++iter;
+            if (func(curr, std::forward<Args>(args)...))
+                return curr;
         }
         throw std::runtime_error("call(): ningun elemento satisface el predicado");
     }
 }
 
+template <typename Iterator, typename Func, typename... Args>
+decltype(auto) ccall(Iterator begin, Iterator end, Func func, Args&&... args) {
+    using Result = invoke_result_t<Func&, decltype(*begin), Args...>;
+    
+    if constexpr(is_void_v<Result>) {
+        for (auto iter = begin; iter != end;) {
+            const auto& curr = *iter; 
+            ++iter;
+            func(curr, std::forward<Args>(args)...);
+        }
+    } else {
+        for (auto iter = begin; iter != end;) {
+            const auto& curr = *iter; 
+            ++iter;
+            if (func(curr, std::forward<Args>(args)...))
+                return curr;
+        }
+        throw std::runtime_error("call(): ningun elemento satisface el predicado");
+    }
+}
 // Variadic template to allow passing additional arguments to the function
 // template <typename Container, typename Func, typename... Args>
 // Iterator Level #1
