@@ -136,14 +136,12 @@ class BinaryTree : public Container<Traits>, public ReverseIterable<Traits> {
     using BackwardIterator      = typename ReverseIterable<Traits>::BackwardIterator;
     using ConstBackwardIterator = typename ReverseIterable<Traits>::ConstBackwardIterator;
     using NodePtr               = Node*;
-    using Parent::empty();
-    using Parent::clear();
+    using Parent::empty;
+    using Parent::clear;
 
     BinaryTree() = default;
 
-    BinaryTree(initializer_list<pair<value_type, Ref>> values) {
-        for (const auto& value : values) insert(value.first, value.second);
-    }
+    BinaryTree(initializer_list<pair<value_type, Ref>> values) { for (const auto& value : values) insert(value.first, value.second); }
 
     BinaryTree(BinaryTree&& other) : Parent() {
         std::scoped_lock lock(other.m_mutex);
@@ -237,9 +235,9 @@ class BinaryTree : public Container<Traits>, public ReverseIterable<Traits> {
         
         while (*currentPtr != nullptr) {
             if(m_comp(nodePtr->getValue(), (*currentPtr)->getValue()))
-                currentPtr = &(*currentPtr)->m_pChild[0];
+                currentPtr = &(*currentPtr)->getLeft();
             else
-                currentPtr = &(*currentPtr)->m_pChild[1];
+                currentPtr = &(*currentPtr)->getRight();
         }
 
        *currentPtr = nodePtr;
@@ -255,16 +253,18 @@ class BinaryTree : public Container<Traits>, public ReverseIterable<Traits> {
     void destroyTree(NodePtr node) {
         if (node == nullptr) return;
 
-        destroyTree(node->m_pChild[0]);
-        destroyTree(node->m_pChild[1]);
+        destroyTree(node->getLeft());
+        destroyTree(node->getRight());
         delete node;
     }
 
     NodePtr cloneTree(NodePtr node) {
         if (node == nullptr) return nullptr;
+
         NodePtr copy = new Node(node->getValue(), node->getRef());
-            copy->m_pChild[0] = cloneTree(node->m_pChild[0]);
-            copy->m_pChild[1] = cloneTree(node->m_pChild[1]);
+        copy->getLeft() = cloneTree(node->getLeft());
+        copy->getRight() = cloneTree(node->getRight());
+
         return copy;
     }
     

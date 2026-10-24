@@ -60,9 +60,9 @@ class Heap : public Container<Traits> {
     ConstForwardIterator cend() const override { return m_data.cend(); }
     
     protected:
-    using Parent::size();
-    using Parent::empty();
-    using Parent::call();
+    using Parent::size;
+    using Parent::empty;
+    using Parent::call;
     using Parent::m_mutex;
     using Parent::m_comp;
     using Parent::m_size;
