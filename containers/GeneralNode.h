@@ -1,5 +1,5 @@
-#ifndef __GENERAL_NODE_H__
-#define __GENERAL_NODE_H__
+#ifndef __GENERALNODE_H__
+#define __GENERALNODE_H__
 #include <iostream>
 #include "../types.h" // Ref
 template <typename T>
@@ -48,4 +48,4 @@ public:
         return is;
     }
 };
-#endif // __GENERAL_NODE_H__
+#endif // __GENERALNODE_H__

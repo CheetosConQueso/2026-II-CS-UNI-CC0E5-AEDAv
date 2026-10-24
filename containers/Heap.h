@@ -13,12 +13,10 @@ struct HeapTraits {
 };
 
 template <typename T>
-struct HeapAscTraits : public HeapTraits<AscendingTraits<T>> {
-};
+struct HeapAscTraits : public HeapTraits<AscendingTraits<T>> {};
 
 template <typename T>
-struct HeapDescTraits : public HeapTraits<DescendingTraits<T>> {
-};
+struct HeapDescTraits : public HeapTraits<DescendingTraits<T>> {};
 
 
 template <typename Traits>
@@ -30,6 +28,7 @@ class Heap : public Container<Traits> {
     using Node                  = Parent::Node;
     using ForwardIterator       = Parent::ForwardIterator;
     using ConstForwardIterator  = Parent::ConstForwardIterator;
+    using vTraits               = Traits::vTraits;
     using NodePtr               = Node*;
     using Parent::Parent;
 
@@ -68,7 +67,7 @@ class Heap : public Container<Traits> {
     using Parent::m_comp;
     using Parent::m_size;
 
-    Vector<Node> m_data;
+    Vector<VectorAscTraits<value_type>> m_data;
 
     void clearUnlocked () override {
         m_data.clearUnlocked();

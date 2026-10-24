@@ -36,7 +36,8 @@ class Container {
         virtual void push_backUnlocked(NodePtr)                 = 0;
 
     public:
-        Container() {}
+        Container() = default;
+
         Container(const Container& another) { *this = another; }
         
         virtual ~Container() = default ;
@@ -140,4 +141,27 @@ class Container {
         std::istream& read(std::istream& is) { return is >> *this; }
         Container& copy( Container& another) { return *this = another; }
 };
+
+template <typename Traits>
+class ReverseIterable {
+public:
+    using BackwardIterator      = typename Traits::BackwardIterator;
+    using ConstBackwardIterator = typename Traits::ConstBackwardIterator;
+    using Node                  = typename Traits::Node;
+
+    virtual BackwardIterator rbegin() = 0;
+    virtual BackwardIterator rend() = 0;
+    virtual ConstBackwardIterator crbegin() const = 0;
+    virtual ConstBackwardIterator crend() const = 0;
+
+    template <typename Func, typename... Args>
+    decltype(auto) rcall(Func func, Args&&... args) {
+        if constexpr (is_void_v<invoke_result_t<Func, Node&, Args...>>) {
+            ::call(rbegin(), rend(), std::forward<Func>(func), std::forward<Args>(args)...);
+        } else {
+            return ::call(rbegin(), rend(), std::forward<Func>(func), std::forward<Args>(args)...);
+        }
+    }
+};
+
 #endif // __CONTAINER__

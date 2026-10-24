@@ -16,11 +16,12 @@ struct CircularDoublyLinkedListDescTraits
 
 template <typename Traits>
 class CircularDoublyLinkedList : public DoublyLinkedList<Traits> {
+
 public:
-    using Parent = DoublyLinkedList<Traits>;
-    using Node = typename Parent::Node;
-    using NodePtr = typename Parent::NodePtr;
-    using BackwardIterator = typename Parent::BackwardIterator;
+    using Parent            = DoublyLinkedList<Traits>;
+    using Node              = typename Parent::Node;
+    using NodePtr           = typename Parent::NodePtr;
+    using BackwardIterator  = typename Parent::BackwardIterator;
 
 protected:
     void push_backUnlocked(NodePtr newNode) override {

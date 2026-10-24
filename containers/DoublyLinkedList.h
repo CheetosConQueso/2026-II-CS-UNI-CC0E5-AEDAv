@@ -19,54 +19,17 @@ public:
     DoublyLinkedListNode(const T& value, Ref ref, NodePtr pNext = nullptr) : Parent(value, ref), m_pNext(pNext) {}
 };
 
-template <typename T>
-class DoublyLinkedListForwardIterator : public ForwardIterator<DoublyLinkedListNode<T>> {
+template <typename T, bool IsConst = false>
+class DoublyLinkedListBackwardIterator : public Iterator<DoublyLinkedListNode<T>,IsConst> {
 public:
-    using MySelf = DoublyLinkedListForwardIterator<T>;
-    using Parent = ForwardIterator<DoublyLinkedListNode<T>>;
+    using MySelf    = DoublyLinkedListBackwardIterator<T,IsConst>;
+    using Node      = DoublyLinkedListNode<T>;
+    using Parent    = Iterator<Node,IsConst>;
     using Parent::Parent;
+    using Parent::set;
 
     MySelf& operator++() {
-        Parent::m_ptr = Parent::m_ptr->m_pNext;
-        return *this;
-    }
-};
-
-template <typename T>
-class DoublyLinkedListConstForwardIterator : public ConstForwardIterator<DoublyLinkedListNode<T>> {
-public:
-    using MySelf = DoublyLinkedListConstForwardIterator<T>;
-    using Parent = ConstForwardIterator<DoublyLinkedListNode<T>>;
-    using Parent::Parent;
-
-    MySelf& operator++() {
-        Parent::m_ptr = Parent::m_ptr->m_pNext;
-        return *this;
-    }
-};
-
-template <typename T>
-class DoublyLinkedListBackwardIterator : public BackwardIterator<DoublyLinkedListNode<T>> {
-public:
-    using MySelf = DoublyLinkedListBackwardIterator<T>;
-    using Parent = BackwardIterator<DoublyLinkedListNode<T>>;
-    using Parent::Parent;
-
-    MySelf& operator++() {
-        Parent::m_ptr = Parent::m_ptr->m_pPrev;
-        return *this;
-    }
-};
-
-template <typename T>
-class DoublyLinkedListConstBackwardIterator : public ConstBackwardIterator<DoublyLinkedListNode<T>> {
-public:
-    using MySelf = DoublyLinkedListConstBackwardIterator<T>;
-    using Parent = ConstBackwardIterator<DoublyLinkedListNode<T>>;
-    using Parent::Parent;
-
-    MySelf& operator++() {
-        Parent::m_ptr = Parent::m_ptr->m_pPrev;
+        set((*this)->m_pPrev);
         return *this;
     }
 };
@@ -76,10 +39,10 @@ struct DoublyLinkedListTraits {
     using value_type            = typename Traits::value_type;
     using Compare               = typename Traits::Compare;
     using Node                  = DoublyLinkedListNode<value_type>;
-    using ForwardIterator       = DoublyLinkedListForwardIterator<value_type>;
-    using ConstForwardIterator  = DoublyLinkedListConstForwardIterator<value_type>;
+    using ForwardIterator       = LinkedListForwardIterator<Node>;
+    using ConstForwardIterator  = LinkedListForwardIterator<Node,true>;
     using BackwardIterator      = DoublyLinkedListBackwardIterator<value_type>;
-    using ConstBackwardIterator = DoublyLinkedListConstBackwardIterator<value_type>;
+    using ConstBackwardIterator = DoublyLinkedListBackwardIterator<value_type,true>;
 };
 
 template <typename T>
@@ -89,13 +52,13 @@ template <typename T>
 struct DoublyLinkedListDescTraits : DoublyLinkedListTraits<DescendingTraits<T>> {};
 
 template <typename Traits>
-class DoublyLinkedList : public LinkedList<Traits> {
+class DoublyLinkedList : public LinkedList<Traits>, public ReverseIterable<Traits> {
 public:
     using Parent                = LinkedList<Traits>;
     using Node                  = typename Traits::Node;
     using NodePtr               = typename Traits::Node*;
-    using BackwardIterator      = typename Traits::BackwardIterator;
-    using ConstBackwardIterator = typename Traits::BackwardIterator;
+    using BackwardIterator      = typename ReverseIterable<Traits>::BackwardIterator;
+    using ConstBackwardIterator = typename ReverseIterable<Traits>::ConstBackwardIterator;
 
 protected:
     void push_backUnlocked(NodePtr newNode) override {
@@ -118,19 +81,10 @@ protected:
     }
 
 public:
-    BackwardIterator      rbegin()  { return BackwardIterator(this->m_pTail); }
-    BackwardIterator      rend()    { return BackwardIterator(nullptr); }
-    ConstBackwardIterator crbegin() { return ConstBackwardIterator(this->m_pTail); }
-    ConstBackwardIterator crend()   { return ConstBackwardIterator(nullptr); }
-
-    template <typename Func, typename... Args>
-    decltype(auto) rcall(Func func, Args&&... args) {
-        if constexpr (is_void_v<invoke_result_t<Func, Node&, Args...>>) {
-            ::call(rbegin(), rend(), std::forward<Func>(func), std::forward<Args>(args)...);
-        } else {
-            return ::call(rbegin(), rend(), std::forward<Func>(func), std::forward<Args>(args)...);
-        }
-    }
+    BackwardIterator rbegin() override              { return BackwardIterator(this->m_pTail); }
+    BackwardIterator rend() override                { return BackwardIterator(nullptr); }
+    ConstBackwardIterator crbegin() const override  { return ConstBackwardIterator(this->m_pTail); }
+    ConstBackwardIterator crend() const override    { return ConstBackwardIterator(nullptr); }
 };
 
 #endif // __DOUBLYLINKEDLIST_H__

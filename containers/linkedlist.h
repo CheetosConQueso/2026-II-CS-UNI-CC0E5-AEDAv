@@ -20,34 +20,27 @@ class LinkedListNode : public GeneralNode<T> {
     LinkedListNode(const T& value, Ref ref, NodePtr pNext) : GeneralNode<T>(value, ref), m_pNext(pNext) {}
 };
 
-template <typename T>
-class LinkedListForwardIterator : public ForwardIterator<LinkedListNode<T>> {
-    public:
-    using MySelf    = LinkedListForwardIterator<T>;
-    using Parent    = ForwardIterator<LinkedListNode<T>>;
+template <typename Node, bool IsConst = false>
+class LinkedListForwardIterator : public Iterator<Node,IsConst> {
+public:
+    using MySelf = LinkedListForwardIterator<Node,IsConst>;
+    using Parent = Iterator<Node,IsConst>;
     using Parent::Parent;
+    using Parent::set;
 
-    MySelf& operator++() override { Parent::m_ptr = Parent::m_ptr->m_pNext; return *this; }
-};
-
-template <typename T>
-class LinkedListConstForwardIterator : public ConstForwardIterator<LinkedListNode<T>> {
-    public:
-    using MySelf    = LinkedListConstForwardIterator<T>;
-    using Parent    = ConstForwardIterator<LinkedListNode<T>>;
-    using Parent::Parent;
-    
-    MySelf& operator++() override { Parent::m_ptr = Parent::m_ptr->m_pNext; return *this; }
+    MySelf& operator++() override {
+        set((*this)->m_pNext);
+        return *this;
+    }
 };
 
 template <typename CompareTraits>
 struct LinkedListTraits {
     using value_type            = typename CompareTraits::value_type;
     using Compare               = typename CompareTraits::Compare;
-    
     using Node                  = LinkedListNode<value_type>;
-    using ForwardIterator       = LinkedListForwardIterator<value_type>;
-    using ConstForwardIterator  = LinkedListConstForwardIterator<value_type>;
+    using ForwardIterator       = LinkedListForwardIterator<Node>;
+    using ConstForwardIterator  = LinkedListForwardIterator<Node,true>;
 };
 
 template <typename T> struct LinkedListAscTraits : public LinkedListTraits<AscendingTraits<T>> {};
@@ -67,11 +60,12 @@ class LinkedList : public Container<Traits> {
     using NodePtr               = Node *;
     using Parent::Parent;
 
+    LinkedList() = default;
+    
     LinkedList(initializer_list<pair<value_type, Ref>> values) {
-        for (const auto& value : values)
-            this->push_back(value.first, value.second);
+        for (const auto& value : values) this->push_back(value.first, value.second);
     }
-
+    
     ~LinkedList() override { this->clear(); }
 
     void insert(const value_type& v, Ref r) { 

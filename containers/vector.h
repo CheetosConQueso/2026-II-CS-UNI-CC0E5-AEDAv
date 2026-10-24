@@ -10,44 +10,33 @@
 
 using namespace std;
 
-template <typename Node>
-class VectorForwardIterator : public ForwardIterator<Node> {
-    public:
-    using MySelf            = VectorForwardIterator<Node>;
-    using Parent            = ForwardIterator<Node>;
+template <typename Node, bool IsConst = false>
+class VectorForwardIterator : public Iterator<Node,IsConst> {
+    
+public:
+    using MySelf            = VectorForwardIterator<Node,IsConst>;
+    using Parent            = Iterator<Node,IsConst>;
     using Parent::Parent;
 
-    MySelf& operator++() { ++Parent::m_ptr; return *this; }
+    MySelf& operator++() { 
+        ++Parent::m_ptr; 
+        return *this; 
+    }
 };
 
-template <typename Node>
-class VectorConstForwardIterator : public ConstForwardIterator<Node> {
+
+template <typename Node, bool IsConst = false>
+class VectorBackwardIterator : public Iterator<Node,IsConst> {
+
 public:
-    using MySelf            = VectorConstForwardIterator<Node>;
-    using Parent            = ConstForwardIterator<Node>;
+    using MySelf            = VectorBackwardIterator<Node,IsConst>;
+    using Parent            = Iterator<Node,IsConst>;
     using Parent::Parent;
 
-    MySelf& operator++() { ++Parent::m_ptr; return *this; }
-};
-
-template <typename Node>
-class VectorBackwardIterator : public BackwardIterator<Node> {
-public:
-    using MySelf            = VectorBackwardIterator<Node>;
-    using Parent            = BackwardIterator<Node>;
-    using Parent::Parent;
-
-    MySelf& operator++() { --Parent::m_ptr; return *this; }
-};
-
-template <typename Node>
-class VectorConstBackwardIterator : public ConstBackwardIterator<Node> {
-public:
-    using MySelf            = VectorConstBackwardIterator<Node>;
-    using Parent            = ConstBackwardIterator<Node>;
-    using Parent::Parent;
-
-    MySelf& operator++() { --Parent::m_ptr; return *this; }
+    MySelf& operator++() { 
+        --Parent::m_ptr; 
+        return *this; 
+    }
 };
 
 template <typename CompareTraits>
@@ -56,18 +45,16 @@ struct VectorTraits {
     using Compare               = typename CompareTraits::Compare;
     using Node                  = GeneralNode<value_type>;
     using ForwardIterator       = VectorForwardIterator<Node>;  // itera sobre Node, no sobre T
-    using ConstForwardIterator  = VectorConstForwardIterator<Node>;
+    using ConstForwardIterator  = VectorForwardIterator<Node,true>;
     using BackwardIterator      = VectorBackwardIterator<Node>; // itera sobre Node, no sobre T
-    using ConstBackwardIterator = VectorConstBackwardIterator<Node>;
+    using ConstBackwardIterator = VectorBackwardIterator<Node,true>;
 };
 
 template <typename T>
-struct VectorAscTraits : public VectorTraits<AscendingTraits<T>> {
-};
+struct VectorAscTraits : public VectorTraits<AscendingTraits<T>> {};
 
 template <typename T>
-struct VectorDescTraits : public VectorTraits<DescendingTraits<T>> {
-};
+struct VectorDescTraits : public VectorTraits<DescendingTraits<T>> {};
 
 template <typename Traits>
 class Vector : public Container<Traits> {
@@ -83,9 +70,25 @@ class Vector : public Container<Traits> {
     using NodePtr               = Node*;
     using Parent::Parent;
 
+    Vector() = default;
+
     Vector(initializer_list<pair<value_type, Ref>> values) {
         for (const auto& value : values)
             this->push_back(value.first, value.second);
+    }
+
+    Vector(const Vector& other) {
+        resize(other.Parent::m_size);
+        for (size_t i = 0; i < other.Parent::m_size; ++i)
+            m_data[i] = other.m_data[i];
+        Parent::m_size = other.Parent::m_size;
+    }
+
+    // Move constructor and move assignment operator
+    Vector(Vector&& other) noexcept {
+        m_data     = std::exchange(other.m_data, nullptr);
+        Parent::m_size     = std::exchange(other.Parent::m_size, 0);
+        m_capacity = std::exchange(other.m_capacity, 0);
     }
 
     ~Vector() override { delete[] m_data; }
@@ -127,19 +130,6 @@ class Vector : public Container<Traits> {
     }
 
     public:
-    Vector(const Vector& other) {
-        resize(other.Parent::m_size);
-        for (size_t i = 0; i < other.Parent::m_size; ++i)
-            m_data[i] = other.m_data[i];
-        Parent::m_size = other.Parent::m_size;
-    }
-
-    // Move constructor and move assignment operator
-    Vector(Vector&& other) noexcept {
-        m_data     = std::exchange(other.m_data, nullptr);
-        Parent::m_size     = std::exchange(other.Parent::m_size, 0);
-        m_capacity = std::exchange(other.m_capacity, 0);
-    }
 
     size_t capacity() const { return m_capacity; }
 
