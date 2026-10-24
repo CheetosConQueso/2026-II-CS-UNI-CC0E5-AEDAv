@@ -5,8 +5,8 @@
 #include <thread>
 #include <vector>
 #include "foreach.h"
-#include "Container.h"
-#include "ContainerIO.h"
+#include "containers/Container.h"
+#include "containers/ContainerIO.h"
 #include "containers/vector.h"
 #include "containers/LinkedList.h"
 #include "containers/CircularLinkedList.h"
@@ -16,16 +16,16 @@
 using namespace std;
 
 void AddOne(GeneralNode<TX> &node) {
-    node.value() += 1;
+    node.getValue() += 1;
 }
 
 template <typename T>
 void AddX(GeneralNode<T> &node, T x) {
-    node.value() += x;
+    node.getValue() += x;
 }
 
 void Square(GeneralNode<TX> &node) {
-    node.value() *= node.value();
+    node.getValue() *= node.getValue();
 }
 
 // Predicado generico para FirstThat/call: true si el valor del nodo es
@@ -79,7 +79,8 @@ void TestContainer(Container &container,
 // atras (rbegin/rend) solamente, imprimiendo los elementos en cada sentido.
 template <typename Container>
 void TestTraversal(Container &container) {
-    using Node = typename Container::Node;
+    using Node          = typename Container::Node;
+    using value_type    = typename Container::value_type;
 
     cout << "Forward traversal:\n\t[";
     container.call(PrintNode<Node>, cout);
@@ -92,9 +93,17 @@ void TestTraversal(Container &container) {
     // Prueba de call()/FirstThat() con valor de retorno: busca el primer
     // nodo cuyo valor sea mayor que el del primer elemento del container.
     if (!container.empty()) {
-        auto threshold = (*container.begin()).getValue();
-        Node &found = container.FirstThat(IsGreaterThan<Node, decltype(threshold)>, threshold);
-        cout << "FirstThat (primer valor > " << threshold << "):\n\t" << found << endl;
+        value_type threshold = container.begin()->getValue();
+
+        try {
+            Node& found = container.FirstThat(IsGreaterThan<Node, value_type>, threshold);
+
+            cout << "FirstThat (primer valor > " << threshold
+                << "):\n\t" << found << endl;
+
+        } catch (const std::exception& e) {
+            cerr << "FirstThat: " << e.what() << endl;
+        }
     }
 }
 
@@ -372,4 +381,115 @@ void DemoCircularDoublyLinkedList()
     cout << "Backward traversal de la lista leida:\n\t[";
     loadedList.rcall(PrintNode<typename IntCircularDoublyLinkedList::Node>, cout);
     cout << "]" << endl;
+}
+
+void DemoHeap() {
+    using IntMinHeap = MinHeap<TX>;
+    using IntMaxHeap = MaxHeap<TX>;
+
+    ofstream("minheap.txt", ios::trunc).close();
+    ofstream("maxheap.txt", ios::trunc).close();
+
+    // Pruebas de push_back
+    cout << "-- PRUEBAS DE PUSH_BACK (MIN HEAP) --\n";
+    IntMinHeap minHeap;
+    TestContainer(minHeap, {{5, 15}, {1, 11}, {8, 18}, {3, 13},
+                            {9, 19}, {2, 12}, {7, 17}}, "minheap.txt");
+
+    cout << "-- PRUEBAS DE PUSH_BACK (MAX HEAP) --\n";
+    IntMaxHeap maxHeap;
+    TestContainer(maxHeap, {{5, 15}, {1, 11}, {8, 18}, {3, 13},
+                            {9, 19}, {2, 12}, {7, 17}}, "maxheap.txt");
+
+    // Pruebas de recorrido
+    cout << "-- PRUEBAS DE RECORRIDO --\n";
+
+    cout << "MinHeap recorrido hacia adelante:\n\t[";
+    minHeap.call(PrintNode<typename IntMinHeap::Node>, cout);
+    cout << "]" << endl;
+
+    cout << "MaxHeap recorrido hacia adelante:\n\t[";
+    maxHeap.call(PrintNode<typename IntMaxHeap::Node>, cout);
+    cout << "]" << endl;
+
+    // Pruebas de ApplyFunction
+    cout << "-- PRUEBAS DE APPLY FUNCTION --\n";
+
+    minHeap.ApplyFunction(AddOne);
+    cout << "MinHeap tras usar AddOne:\n\t" << minHeap << endl;
+
+    maxHeap.ApplyFunction(AddX<TX>, TX(10));
+    cout << "MaxHeap tras usar AddX(10):\n\t" << maxHeap << endl;
+
+    // Pruebas de pop_back
+    cout << "-- PRUEBAS DE POP_BACK --\n";
+
+    cout << "Extrayendo elementos del MinHeap:\n";
+    while (!minHeap.empty()) {
+        auto node = minHeap.pop_back();
+        cout << "\tExtraido: " << node
+             << " | Heap restante: " << minHeap << endl;
+    }
+
+    cout << "Extrayendo elementos del MaxHeap:\n";
+    while (!maxHeap.empty()) {
+        auto node = maxHeap.pop_back();
+        cout << "\tExtraido: " << node
+             << " | Heap restante: " << maxHeap << endl;
+    }
+
+    // Prueba de extraccion de heap vacio
+    cout << "-- PRUEBA DE HEAP VACIO --\n";
+
+    try {
+        minHeap.pop_back();
+    } catch (const std::out_of_range& e) {
+        cout << "Excepcion esperada: " << e.what() << endl;
+    }
+
+    // Pruebas de reinsercion
+    cout << "-- PRUEBAS DE REINSERCION --\n";
+
+    minHeap.push_back(10, 2);
+    minHeap.push_back(4, 1);
+    minHeap.push_back(15, 3);
+
+    cout << "MinHeap luego de reinsertar:\n\t" << minHeap << endl;
+
+    // Pruebas de clear
+    cout << "-- PRUEBAS DE CLEAR --\n";
+
+    minHeap.clear();
+    cout << "MinHeap luego de clear:\n\t" << minHeap << endl;
+
+    // Pruebas de lectura
+    cout << "-- PRUEBAS DE LECTURA --\n";
+
+    IntMinHeap loadedMinHeap;
+    ifstream inMin("minheap.txt");
+    inMin >> loadedMinHeap;
+    inMin.close();
+
+    cout << "MinHeap leido desde archivo:\n\t"
+         << loadedMinHeap << endl;
+
+    IntMaxHeap loadedMaxHeap;
+    ifstream inMax("maxheap.txt");
+    inMax >> loadedMaxHeap;
+    inMax.close();
+
+    cout << "MaxHeap leido desde archivo:\n\t"
+         << loadedMaxHeap << endl;
+
+    cout << "-- EXTRACCION DE HEAPS LEIDOS --\n";
+
+    cout << "MinHeap:\n\t";
+    while (!loadedMinHeap.empty())
+        cout << loadedMinHeap.pop_back() << " ";
+    cout << endl;
+
+    cout << "MaxHeap:\n\t";
+    while (!loadedMaxHeap.empty())
+        cout << loadedMaxHeap.pop_back() << " ";
+    cout << endl;
 }
