@@ -8,4 +8,6 @@ void DemoLinkedList();
 void DemoCircularLinkedList();
 void DemoDoublyLinkedList();
 void DemoCircularDoublyLinkedList();
+void DemoHeap();
+void DemoBinaryTree();
 #endif // __DEMOS_H__

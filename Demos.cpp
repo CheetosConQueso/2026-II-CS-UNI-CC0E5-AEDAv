@@ -12,6 +12,8 @@
 #include "containers/CircularLinkedList.h"
 #include "containers/DoublyLinkedList.h"
 #include "containers/CircularDoublyLinkedList.h"
+#include "containers/Heap.h"
+#include "containers/BinaryTree.h"
 #include "Demos.h"
 using namespace std;
 
@@ -421,7 +423,6 @@ void DemoHeap() {
     maxHeap.ApplyFunction(AddX<TX>, TX(10));
     cout << "MaxHeap tras usar AddX(10):\n\t" << maxHeap << endl;
 
-    // Pruebas de pop_back
     cout << "-- PRUEBAS DE POP_BACK --\n";
 
     cout << "Extrayendo elementos del MinHeap:\n";
@@ -438,7 +439,6 @@ void DemoHeap() {
              << " | Heap restante: " << maxHeap << endl;
     }
 
-    // Prueba de extraccion de heap vacio
     cout << "-- PRUEBA DE HEAP VACIO --\n";
 
     try {
@@ -447,7 +447,6 @@ void DemoHeap() {
         cout << "Excepcion esperada: " << e.what() << endl;
     }
 
-    // Pruebas de reinsercion
     cout << "-- PRUEBAS DE REINSERCION --\n";
 
     minHeap.push_back(10, 2);
@@ -456,13 +455,11 @@ void DemoHeap() {
 
     cout << "MinHeap luego de reinsertar:\n\t" << minHeap << endl;
 
-    // Pruebas de clear
     cout << "-- PRUEBAS DE CLEAR --\n";
 
     minHeap.clear();
     cout << "MinHeap luego de clear:\n\t" << minHeap << endl;
 
-    // Pruebas de lectura
     cout << "-- PRUEBAS DE LECTURA --\n";
 
     IntMinHeap loadedMinHeap;
@@ -492,4 +489,115 @@ void DemoHeap() {
     while (!loadedMaxHeap.empty())
         cout << loadedMaxHeap.pop_back() << " ";
     cout << endl;
+}
+
+void DemoBinaryTree() {
+    using IntAscTree  = BinaryTree<BinaryTreeAscTraits<TX>>;
+    using IntDescTree = BinaryTree<BinaryTreeDescTraits<TX>>;
+
+    ofstream("binarytree_asc.txt", ios::trunc).close();
+    ofstream("binarytree_desc.txt", ios::trunc).close();
+
+    cout << "-- PRUEBAS DE INSERT (ASCENDING TREE) --\n";
+    IntAscTree ascTree;
+
+    TestContainer(ascTree,
+        {{8, 18}, {3, 13}, {10, 20}, {1, 11},
+         {6, 16}, {14, 24}, {4, 14}, {7, 17}, {13, 23}},
+        "binarytree_asc.txt");
+
+    cout << "-- PRUEBAS DE INSERT (DESCENDING TREE) --\n";
+    IntDescTree descTree;
+
+    TestContainer(descTree,
+        {{8, 18}, {3, 13}, {10, 20}, {1, 11},
+         {6, 16}, {14, 24}, {4, 14}, {7, 17}, {13, 23}},
+        "binarytree_desc.txt");
+
+    cout << "-- PRUEBAS DE RECORRIDO (ASCENDING TREE) --\n";
+    TestTraversal(ascTree);
+
+    cout << "-- PRUEBAS DE RECORRIDO (DESCENDING TREE) --\n";
+    TestTraversal(descTree);
+
+    cout << "-- PRUEBAS DE ITERADORES --\n";
+
+    cout << "AscTree usando range-based for (preorder):\n\t[";
+    for (auto&& node : ascTree)
+        cout << node << " ";
+    cout << "]" << endl;
+
+    cout << "AscTree usando rbegin/rend (postorder right-first):\n\t[";
+    for (auto it = ascTree.rbegin(); it != ascTree.rend(); ++it)
+        cout << *it << " ";
+    cout << "]" << endl;
+
+    cout << "-- PRUEBAS DE REINSERCION --\n";
+
+    ascTree.insert(5, 15);
+    ascTree.insert(2, 12);
+    ascTree.insert(12, 22);
+
+    cout << "AscTree luego de 3 inserts:\n\t" << ascTree << endl;
+
+    cout << "Preorder despues de insertar:\n\t[";
+    ascTree.call(PrintNode<typename IntAscTree::Node>, cout);
+    cout << "]" << endl;
+
+    cout << "-- PRUEBAS DE COPY CONSTRUCTOR --\n";
+
+    IntAscTree copiedTree(ascTree);
+
+    cout << "Arbol original:\n" << ascTree << endl;
+    cout << "Arbol copiado:\n" << copiedTree << endl;
+
+    copiedTree.insert(20, 30);
+
+    cout << "Arbol copiado luego de insertar 20:\n"
+         << copiedTree << endl;
+    cout << "Arbol original (sin cambios):\n"
+         << ascTree << endl;
+
+    cout << "-- PRUEBAS DE MOVE CONSTRUCTOR --\n";
+
+    IntAscTree movedTree(std::move(copiedTree));
+
+    cout << "Arbol movido:\n" << movedTree << endl;
+    cout << "Tamanio del arbol origen: " << copiedTree.size() << endl;
+
+    cout << "-- PRUEBAS DE CLEAR --\n";
+
+    ascTree.clear();
+
+    cout << "AscTree luego de clear:\n" << ascTree << endl;
+    cout << "Tamanio: " << ascTree.size() << endl;
+
+    ascTree.insert(10, 2);
+    ascTree.insert(5, 1);
+    ascTree.insert(15, 3);
+
+    cout << "AscTree luego de reinsertar:\n"
+         << ascTree << endl;
+
+    cout << "-- PRUEBAS DE LECTURA --\n";
+
+    IntAscTree loadedTree;
+    ifstream in("binarytree_asc.txt");
+
+    in >> loadedTree;
+    in.close();
+
+    cout << "BinaryTree leido desde archivo:\n"
+         << loadedTree << endl;
+
+    cout << "-- RECORRIDOS DEL ARBOL LEIDO --\n";
+    TestTraversal(loadedTree);
+
+    cout << "-- PRUEBAS DE ARBOL VACIO --\n";
+
+    IntAscTree emptyTree;
+
+    cout << "Arbol vacio, size = " << emptyTree.size() << endl;
+    cout << "begin() == end(): "
+         << (emptyTree.begin() == emptyTree.end()) << endl;
 }
