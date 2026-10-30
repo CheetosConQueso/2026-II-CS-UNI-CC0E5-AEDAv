@@ -48,18 +48,32 @@ template <typename T> struct LinkedListDescTraits : public LinkedListTraits<Desc
 
 
 template <typename Traits>
-class LinkedList : public Container<Traits> {
-    public:
+class LinkedList : 
+    public Container<Traits> {
+
+public:
     using Parent                = Container<Traits>;
+    
     using value_type            = typename Parent::value_type;
     using Node                  = typename Parent::Node;
     using Compare               = typename Parent::Compare;
-    using ForwardIterator       = typename Parent::ForwardIterator;
-    using ConstForwardIterator  = typename Parent::ConstForwardIterator;
     using Delim                 = typename Parent::Delim;
+    
+    using ForwardIterator       = typename ForwardIterable<Traits>::ForwardIterator;
+    using ConstForwardIterator  = typename ForwardIterable<Traits>::ConstForwardIterator;
+    
     using NodePtr               = Node *;
     using Parent::Parent;
 
+protected:
+    using Parent::m_comp;
+    using Parent::m_mutex;
+
+    NodePtr m_pRoot = nullptr; 
+    NodePtr m_pTail = nullptr;
+    Node sentinel;
+
+public:
     LinkedList() = default;
     
     LinkedList(initializer_list<pair<value_type, Ref>> values) {
@@ -77,12 +91,13 @@ class LinkedList : public Container<Traits> {
     ForwardIterator      end()    override       { return ForwardIterator(&sentinel); }
     ConstForwardIterator cbegin() const override { return ConstForwardIterator(m_pRoot ? m_pRoot : &sentinel); }
     ConstForwardIterator cend()   const override { return ConstForwardIterator(&sentinel); }
+    
+    LinkedList& operator=(const LinkedList& another) { 
+        scoped_lock lock(m_mutex);
+        return copy(another); 
+    }
 
-    protected:
-    NodePtr m_pRoot = nullptr; 
-    NodePtr m_pTail = nullptr;
-    Node sentinel;
-
+protected:
     void clearUnlocked() override {
         Parent::ApplyFunction([](Node& node) { delete &node; });
         m_pRoot = nullptr;
@@ -116,7 +131,7 @@ class LinkedList : public Container<Traits> {
 
         NodePtr* currentPtr = &m_pRoot;
         while (*currentPtr != &sentinel) {
-            if(Parent::m_comp(nodePtr->getValue(), (*currentPtr)->getValue())) {
+            if(m_comp(nodePtr->getValue(), (*currentPtr)->getValue())) {
                 nodePtr->m_pNext = *currentPtr;
                 *currentPtr = nodePtr;
                 ++Parent::m_size;
@@ -126,6 +141,20 @@ class LinkedList : public Container<Traits> {
         }
         
         push_backUnlocked(nodePtr);
+    }
+
+    LinkedList& copy(const LinkedList& another) {
+        if (this == &another) return *this;
+        
+        clearUnlocked();
+
+        another.cApplyFunction([this](const Node& node) {
+            push_backUnlocked(node.getValue(), node.getRef());
+        });
+
+        m_comp  = another.m_comp;
+
+        return *this;
     }
 };
 #endif // __LINKEDLIST_H__

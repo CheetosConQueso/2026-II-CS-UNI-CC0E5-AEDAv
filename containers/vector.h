@@ -57,19 +57,35 @@ template <typename T>
 struct VectorDescTraits : public VectorTraits<DescendingTraits<T>> {};
 
 template <typename Traits>
-class Vector : public Container<Traits> {
-    public:
+class Vector : 
+    public Container<Traits>, 
+    public BackwardIterable<Traits> {
+
+public:
     using Parent                = Container<Traits>;
+    
     using value_type            = Parent::value_type;
     using Compare               = Parent::Compare;    
     using Node                  = Parent::Node;
-    using ForwardIterator       = Parent::ForwardIterator;
-    using ConstForwardIterator  = Parent::ConstForwardIterator;
-    using BackwardIterator      = Traits::BackwardIterator;
-    using ConstBackwardIterator = Traits::ConstBackwardIterator;
+    
+    using ForwardIterator       = ForwardIterable<Traits>::ForwardIterator;
+    using ConstForwardIterator  = ForwardIterable<Traits>::ConstForwardIterator;
+    
+    using BackwardIterator      = BackwardIterable<Traits>::BackwardIterator;
+    using ConstBackwardIterator = BackwardIterable<Traits>::ConstBackwardIterator;
+    
     using NodePtr               = Node*;
     using Parent::Parent;
 
+protected:
+    using Parent::m_comp;
+    using Parent::m_size;
+    using Parent::m_mutex;
+
+    NodePtr m_data     = nullptr;
+    size_t  m_capacity  = 0;
+
+public:
     Vector() = default;
 
     Vector(initializer_list<pair<value_type, Ref>> values) {
@@ -78,31 +94,26 @@ class Vector : public Container<Traits> {
     }
 
     Vector(const Vector& other) {
-        resize(other.Parent::m_size);
-        for (size_t i = 0; i < other.Parent::m_size; ++i)
+        resize(other.m_size);
+        for (size_t i = 0; i < other.m_size; ++i)
             m_data[i] = other.m_data[i];
-        Parent::m_size = other.Parent::m_size;
+        m_size = other.m_size;
     }
 
-    // Move constructor and move assignment operator
     Vector(Vector&& other) noexcept {
         m_data     = std::exchange(other.m_data, nullptr);
-        Parent::m_size     = std::exchange(other.Parent::m_size, 0);
+        m_size     = std::exchange(other.m_size, 0);
         m_capacity = std::exchange(other.m_capacity, 0);
     }
 
     ~Vector() override { delete[] m_data; }
 
-    protected:
-    NodePtr m_data     = nullptr;
-    size_t  m_capacity  = 0;
-    Compare m_comp;
-
+protected:
     void resize(size_t new_cap) {
         if (new_cap <= m_capacity) return;
+        
         Node* new_data = new Node[new_cap];
-        for (size_t i = 0; i < Parent::size(); ++i)
-            new_data[i] = m_data[i];
+        for (size_t i = 0; i < m_size; ++i) new_data[i] = m_data[i];
         delete[] m_data;
         m_data = new_data;
         m_capacity = new_cap;
@@ -111,7 +122,7 @@ class Vector : public Container<Traits> {
     void clearUnlocked() override {
         delete [] m_data;
         m_data     = nullptr;
-        Parent::m_size = 0;
+        m_size = 0;
         m_capacity = 0;
     }
 
@@ -121,49 +132,69 @@ class Vector : public Container<Traits> {
     }
 
     void push_backUnlocked(NodePtr nodePtr) override {
-        if (Parent::m_size == m_capacity) {
+        if (m_size == m_capacity) {
             size_t new_cap = (m_capacity == 0) ? 10 : m_capacity * 2;
             resize(new_cap);
         }
-        m_data[Parent::m_size] = *nodePtr;
-        ++Parent::m_size;
+        m_data[m_size] = *nodePtr;
+        ++m_size;
     }
 
-    public:
+    Vector& copy(const Vector& another) {
+        if (this == &another) return *this;
+        
+        clearUnlocked();
+        
+        another.cApplyFunction([this](const Node& node) {
+            push_backUnlocked(node.getValue(), node.getRef());
+        });
+        
+        m_comp     = another.m_comp;
+        m_capacity = another.m_capacity;
+
+        return *this;
+    }
+
+public:
 
     size_t capacity() const { return m_capacity; }
 
     ForwardIterator       begin() override        { return ForwardIterator(m_data); }
-    ForwardIterator       end()   override        { return ForwardIterator(m_data + Parent::m_size); }
+    ForwardIterator       end()   override        { return ForwardIterator(m_data + m_size); }
     ConstForwardIterator  cbegin() const override { return ConstForwardIterator(m_data); }
-    ConstForwardIterator  cend() const override   { return ConstForwardIterator(m_data + Parent::m_size); }
-    BackwardIterator      rbegin()                { return BackwardIterator(m_data + Parent::m_size - 1); }
+    ConstForwardIterator  cend() const override   { return ConstForwardIterator(m_data + m_size); }
+    BackwardIterator      rbegin()                { return BackwardIterator(m_data + m_size - 1); }
     BackwardIterator      rend()                  { return BackwardIterator(m_data - 1); }
-    ConstBackwardIterator crbegin() const         { return ConstBackwardIterator(m_data + Parent::m_size - 1); }
+    ConstBackwardIterator crbegin() const         { return ConstBackwardIterator(m_data + m_size - 1); }
     ConstBackwardIterator crend() const           { return ConstBackwardIterator(m_data - 1); }
 
     Node pop_back() {
         lock_guard<mutex> lock(Parent::m_mutex);
         if (Parent::empty()) throw std::out_of_range("Vector vacio");
-        Node ret = m_data[Parent::m_size-1];
-        --Parent::m_size;
+        Node ret = m_data[m_size-1];
+        --m_size;
         return ret;
     }
 
 
     Node& at(size_t index) {
-        if (index >= Parent::m_size) throw std::out_of_range("Indice fuera de rango");
+        if (index >= m_size) throw std::out_of_range("Indice fuera de rango");
         return m_data[index];
     }
 
     Node& operator[](size_t index) {
-        if (index >= Parent::m_size) throw std::out_of_range("Indice fuera de rango");
+        if (index >= m_size) throw std::out_of_range("Indice fuera de rango");
         return m_data[index];
     }
 
     Node& operator[] (size_t index) const {
-        if (index >= Parent::m_size) throw std::out_of_range("Indice fuera de rango");
+        if (index >= m_size) throw std::out_of_range("Indice fuera de rango");
         return m_data[index];
+    }
+
+    Vector& operator=(const Vector& another) { 
+        scoped_lock lock(m_mutex);
+        return copy(another); 
     }
 
     template<typename Func, typename... Args>

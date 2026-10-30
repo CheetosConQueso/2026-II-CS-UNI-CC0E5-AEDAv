@@ -427,14 +427,14 @@ void DemoHeap() {
 
     cout << "Extrayendo elementos del MinHeap:\n";
     while (!minHeap.empty()) {
-        auto node = minHeap.pop_back();
+        auto node = minHeap.pop();
         cout << "\tExtraido: " << node
              << " | Heap restante: " << minHeap << endl;
     }
 
     cout << "Extrayendo elementos del MaxHeap:\n";
     while (!maxHeap.empty()) {
-        auto node = maxHeap.pop_back();
+        auto node = maxHeap.pop();
         cout << "\tExtraido: " << node
              << " | Heap restante: " << maxHeap << endl;
     }
@@ -442,7 +442,7 @@ void DemoHeap() {
     cout << "-- PRUEBA DE HEAP VACIO --\n";
 
     try {
-        minHeap.pop_back();
+        minHeap.pop();
     } catch (const std::out_of_range& e) {
         cout << "Excepcion esperada: " << e.what() << endl;
     }
@@ -482,12 +482,12 @@ void DemoHeap() {
 
     cout << "MinHeap:\n\t";
     while (!loadedMinHeap.empty())
-        cout << loadedMinHeap.pop_back() << " ";
+        cout << loadedMinHeap.pop() << " ";
     cout << endl;
 
     cout << "MaxHeap:\n\t";
     while (!loadedMaxHeap.empty())
-        cout << loadedMaxHeap.pop_back() << " ";
+        cout << loadedMaxHeap.pop() << " ";
     cout << endl;
 }
 

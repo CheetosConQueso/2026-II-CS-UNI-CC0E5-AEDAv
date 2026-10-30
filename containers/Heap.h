@@ -13,28 +13,44 @@ struct HeapTraits {
 };
 
 template <typename T>
-struct HeapAscTraits : public HeapTraits<AscendingTraits<T>> {};
+struct HeapAscTraits : 
+    public HeapTraits<AscendingTraits<T>> {};
 
 template <typename T>
-struct HeapDescTraits : public HeapTraits<DescendingTraits<T>> {};
+struct HeapDescTraits : 
+    public HeapTraits<DescendingTraits<T>> {};
 
 
 template <typename Traits>
-class Heap : public Container<Traits> {
-    public:
+class Heap : 
+    public Container<Traits> {
+
+public:
     using Parent                = Container<Traits>;
+    
     using value_type            = Parent::value_type;
     using Compare               = Parent::Compare;    
     using Node                  = Parent::Node;
-    using ForwardIterator       = Parent::ForwardIterator;
-    using ConstForwardIterator  = Parent::ConstForwardIterator;
+    
+    using ForwardIterator       = ForwardIterable<Traits>::ForwardIterator;
+    using ConstForwardIterator  = ForwardIterable<Traits>::ConstForwardIterator;
+    
     using NodePtr               = Node*;
     using Parent::Parent;
+    
     using Parent::size;
     using Parent::empty;
     using Parent::call;
 
-    Node pop_back() {
+protected:
+    using Parent::m_mutex;
+    using Parent::m_comp;
+    using Parent::m_size;
+
+    Vector<VectorAscTraits<value_type>> m_data;
+
+public:
+    Node pop() {
         scoped_lock lock(m_mutex);
 
         if (empty()) throw std::out_of_range("Heap vacio");
@@ -52,22 +68,20 @@ class Heap : public Container<Traits> {
         scoped_lock lock (m_mutex);
         call(func, std::forward<Args>(args)...);
 
-        for (size_t i = m_data.size() / 2; i > 0; --i)
-            heapifyDown(i - 1);
+        for (size_t i = m_data.size() / 2; i > 0; --i) heapifyDown(i - 1);
     }
     
-    ForwardIterator begin() override { return m_data.begin(); }
-    ForwardIterator end() override { return m_data.end(); }
+    ForwardIterator      begin() override { return m_data.begin(); }
+    ForwardIterator      end() override { return m_data.end(); }
     ConstForwardIterator cbegin() const override { return m_data.cbegin(); }
     ConstForwardIterator cend() const override { return m_data.cend(); }
-    
-    protected:
-    using Parent::m_mutex;
-    using Parent::m_comp;
-    using Parent::m_size;
 
-    Vector<VectorAscTraits<value_type>> m_data;
+    Heap& operator=(const Heap& another) { 
+        scoped_lock lock(m_mutex);
+        return copy(another); 
+    }
 
+protected:
     void clearUnlocked () override {
         m_data.clear();
         m_size = 0;
@@ -124,6 +138,16 @@ class Heap : public Container<Traits> {
     
     Node getLeftChild(size_t index) const { return m_data[index * 2 + 1]; }
     Node getRightChild(size_t index) const { return m_data[index * 2 + 2]; }
+
+    Heap& copy(const Heap& another) {
+        if (this == &another) return *this;
+        
+        m_size = another.m_size;
+        m_comp = another.m_comp;
+        m_data = another.m_data;
+        
+        return *this;
+    }
 };
 
 template <typename T> class MinHeap : public Heap<HeapAscTraits<T>> {};

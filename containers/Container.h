@@ -7,13 +7,17 @@
 #include "../foreach.h"
 #include "../types.h"
 
-template <typename T, typename CompareT> struct CompareTraits {
-    using value_type        = T;
-    using Compare           = CompareT;
+template <typename T, typename CompareT> 
+struct CompareTraits {
+    using value_type = T;
+    using Compare    = CompareT;
 };
 
-template <typename T> struct AscendingTraits : public CompareTraits<T, std::less<T>> {};
-template <typename T> struct DescendingTraits : public CompareTraits<T, std::greater<T>> {};
+template <typename T> 
+struct AscendingTraits : public CompareTraits<T, std::less<T>> {};
+
+template <typename T> 
+struct DescendingTraits : public CompareTraits<T, std::greater<T>> {};
 
 template <typename Traits>
 class Container;
@@ -25,13 +29,11 @@ template <typename Traits>
 std::istream& operator>>(std::istream& is, Container<Traits>& container);
 
 template <typename Traits>
-class Container {
+class Container : public ForwardIterable<Traits> {
 public:
     using value_type            = typename Traits::value_type;
     using Node                  = typename Traits::Node;
     using Compare               = typename Traits::Compare;
-    using ForwardIterator       = typename Traits::ForwardIterator;
-    using ConstForwardIterator  = typename Traits::ConstForwardIterator;
     using Delim                 = typename Node::Delim;
     using NodePtr               = Node*;
 
@@ -43,7 +45,7 @@ protected:
     virtual void clearUnlocked()                            = 0;
     virtual void push_backUnlocked(const value_type&, Ref)  = 0;
     virtual void push_backUnlocked(NodePtr)                 = 0;
-
+    
 public:
     Container() = default;
 
@@ -52,12 +54,8 @@ public:
     virtual ~Container() = default ;
 
     virtual size_t size() const { return m_size; } 
+    
     bool empty() const  { return size() == 0; }
-
-    virtual ForwardIterator         begin()         = 0;
-    virtual ForwardIterator         end()           = 0;
-    virtual ConstForwardIterator    cbegin () const = 0;
-    virtual ConstForwardIterator    cend () const   = 0;
 
     void push_back(const value_type& v, Ref r) {
         scoped_lock lock(m_mutex);
@@ -69,77 +67,10 @@ public:
         clearUnlocked();
     };
 
-    template <typename Func, typename... Args> 
-    void ApplyFunction(Func func, Args... args) { 
-        call(func, std::forward<Args>(args)...); 
-    }
-    
-    template <typename Func, typename... Args> 
-    void cApplyFunction(Func func, Args... args) const { 
-        ccall(func, std::forward<Args>(args)...); 
-    }
-
-    template <typename Func, typename... Args> 
-    Node& FirstThat(Func func, Args... args) { 
-        return call(func, std::forward<Args>(args)...); 
-    }    
-
-    template <typename Func, typename... Args> 
-    const Node& cFirstThat(Func func, Args... args) const { 
-        return ccall(func, std::forward<Args>(args)...); 
-    }  
-
-    template <typename Func, typename... Args> 
-    decltype(auto) call(Func func, Args&&... args) { 
-        return ::call(begin(), end(), std::forward<Func>(func), std::forward<Args>(args)...); 
-    }
-
-    template <typename Func, typename... Args> 
-    decltype(auto) ccall(Func func, Args&&... args) const { 
-        return ::ccall(cbegin(), cend(), std::forward<Func>(func), std::forward<Args>(args)...); 
-    }
-
     friend std::ostream& operator<< <Traits>(std::ostream& os,const Container& container);
     friend std::istream& operator>> <Traits>(std::istream& is, Container& container);
 
-    Container& operator=(const Container& another) {
-        if (this == &another) return *this;
-
-        scoped_lock lock(m_mutex, another.m_mutex);  
-        
-        clearUnlocked();
-        another.cApplyFunction([this](const Node& node) {
-            push_backUnlocked(node.getValue(), node.getRef());
-        });
-        m_comp = another.m_comp;
-        return *this;
-    }
-
     std::ostream& write(std::ostream& os) { return os << *this; }
     std::istream& read(std::istream& is) { return is >> *this; }
-    Container& copy( Container& another) { return *this = another; }
 };
-
-template <typename Traits>
-class ReverseIterable {
-public:
-    using BackwardIterator      = typename Traits::BackwardIterator;
-    using ConstBackwardIterator = typename Traits::ConstBackwardIterator;
-    using Node                  = typename Traits::Node;
-
-    virtual BackwardIterator rbegin() = 0;
-    virtual BackwardIterator rend() = 0;
-    virtual ConstBackwardIterator crbegin() const = 0;
-    virtual ConstBackwardIterator crend() const = 0;
-
-    template <typename Func, typename... Args>
-    decltype(auto) rcall(Func func, Args&&... args) {
-        if constexpr (is_void_v<invoke_result_t<Func, Node&, Args...>>) {
-            ::call(rbegin(), rend(), std::forward<Func>(func), std::forward<Args>(args)...);
-        } else {
-            return ::call(rbegin(), rend(), std::forward<Func>(func), std::forward<Args>(args)...);
-        }
-    }
-};
-
 #endif // __CONTAINER__

@@ -52,13 +52,16 @@ template <typename T>
 struct DoublyLinkedListDescTraits : DoublyLinkedListTraits<DescendingTraits<T>> {};
 
 template <typename Traits>
-class DoublyLinkedList : public LinkedList<Traits>, public ReverseIterable<Traits> {
+class DoublyLinkedList : 
+    public LinkedList<Traits>, 
+    public BackwardIterable<Traits> {
 public:
     using Parent                = LinkedList<Traits>;
     using Node                  = typename Traits::Node;
     using NodePtr               = typename Traits::Node*;
-    using BackwardIterator      = typename ReverseIterable<Traits>::BackwardIterator;
-    using ConstBackwardIterator = typename ReverseIterable<Traits>::ConstBackwardIterator;
+    
+    using BackwardIterator      = typename BackwardIterable<Traits>::BackwardIterator;
+    using ConstBackwardIterator = typename BackwardIterable<Traits>::ConstBackwardIterator;
 
 protected:
     void push_backUnlocked(NodePtr newNode) override {
