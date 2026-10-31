@@ -76,13 +76,9 @@ protected:
 
 private:
 
-    static void updateHeight(NodePtr node) {
-        node->m_height = 1 + std::max(node->getLeft()->m_height,node->getRight()->m_height);
-    }
+    static void updateHeight(NodePtr node) { node->m_height = 1 + std::max(node->getLeft()->m_height,node->getRight()->m_height); }
 
-    static int bFactor(NodePtr node) {
-        return node->getLeft()->m_height - node->getRight()->m_height;
-    }
+    static int bFactor(NodePtr node) { return node->getLeft()->m_height - node->getRight()->m_height; }
 
     static void rotate(NodePtr& root, int dir) {
         NodePtr pivot = (dir == 0) ? root->getRight() : root->getLeft();
