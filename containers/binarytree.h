@@ -28,6 +28,11 @@ public:
     
     const Node* getLeft() const { return m_pChild[0]; }
     const Node* getRight() const { return m_pChild[1]; }
+
+    void setLeft(NodePtr ptr) { m_pChild[0] = ptr; }
+    void setRight(NodePtr ptr) { m_pChild[1] = ptr; }
+
+    virtual ~BinaryTreeNode() = default;
 };
 
 template <typename BTIterator>
@@ -254,8 +259,10 @@ public:
     
     using InOrderIterator           = typename Traits::InOrderIterator;
     using ReverseInOrderIterator    = typename Traits::ReverseInOrderIterator;
+    
     using PreOrderIterator          = typename Traits::PreOrderIterator;
     using ReversePreOrderIterator   = typename Traits::ReversePreOrderIterator;
+    
     using PostOrderIterator         = typename Traits::PostOrderIterator;
     using ReversePostOrderIterator  = typename Traits::ReversePostOrderIterator;
 
@@ -294,6 +301,42 @@ public:
     void insert(const value_type& value, Ref ref) {
         scoped_lock lock(m_mutex);
         internalInsert(value, ref);
+    }
+
+    void remove(const value_type& value, Ref ref) {
+        scoped_lock lock (m_mutex);
+
+        NodePtr* curr = &m_pRoot;
+
+        while (*curr && ((*curr)->getValue() != value || (*curr)->getRef() != ref)) {
+            if (m_comp(value, (*curr)->getValue())) 
+                curr = &(*curr)->getLeft();
+            else 
+                curr = &(*curr)->getRight();
+        }
+        
+        if (!*curr) return;
+
+        NodePtr* toReplace = curr;
+        NodePtr toDelete  = *toReplace;
+
+        if (!(*toReplace)->hasLeft()) { *curr = (*toReplace)->getRight(); }
+        else if (!(*toReplace)->hasRight()) { *curr = (*toReplace)->getLeft(); }
+        else {
+            curr = &(*curr)->getLeft();
+            while ((*curr)->hasRight()) curr = &(*curr)->getRight();
+
+            NodePtr replacement = *curr;
+            *curr = replacement->getLeft();
+
+            replacement->setLeft((*toReplace)->getLeft());
+            replacement->setRight((*toReplace)->getRight());
+
+            *toReplace = replacement;
+        }
+
+        delete toDelete;
+        --m_size;
     }
 
     ForwardIterator  begin() override  { return ForwardIterator(m_pRoot); }
@@ -355,7 +398,7 @@ public:
 
 protected:
     void push_backUnlocked(const value_type& value, Ref ref) override {
-        NodePtr nodePtr = new Node(value, ref);
+        NodePtr nodePtr = createNode(value, ref);
         push_backUnlocked(nodePtr);
     };
 
@@ -364,11 +407,11 @@ protected:
     };
     
     void internalInsert(const value_type& value, Ref ref) {
-        NodePtr nodePtr = new Node(value, ref);
+        NodePtr nodePtr = createNode(value, ref);
         internalInsert(nodePtr);
     }
     
-    void internalInsert(NodePtr nodePtr) {
+    virtual void internalInsert(NodePtr nodePtr) {
         NodePtr* currentPtr = &m_pRoot;
         
         while (*currentPtr != nullptr) {
@@ -396,6 +439,10 @@ protected:
         delete node;
     }
 
+    virtual NodePtr createNode(const value_type& value, Ref ref) {
+        return new Node(value, ref);
+    }
+
     BinaryTree& copy(const BinaryTree& another) { 
         if (this == &another) return *this;
         
@@ -408,10 +455,10 @@ protected:
         return *this;
     }
 
-    NodePtr cloneTree(NodePtr node) {
-        if (node == nullptr) return nullptr;
+    virtual NodePtr cloneTree(NodePtr node) {
+        if (!node) return nullptr;
 
-        NodePtr copy = new Node(node->getValue(), node->getRef());
+        NodePtr copy = createNode(node->getValue(), node->getRef());
         copy->getLeft() = cloneTree(node->getLeft());
         copy->getRight() = cloneTree(node->getRight());
 
